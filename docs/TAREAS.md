@@ -51,7 +51,8 @@ Estado: [x] hecho, [ ] pendiente.
 
 ## Fase 5: Backend
 
-- [ ] Elegir tecnología (opción: Spring Boot con PostgreSQL)
+- [x] Elegir tecnología: Spring Boot con PostgreSQL, en la carpeta `backend/`
+- [x] Esqueleto del backend: migraciones con las 10 tablas, datos de ejemplo, Swagger y formato de error
 - [ ] API para recibir las lecturas de sensores
 - [ ] API de contenedores, rutas, incidentes y reportes
 - [ ] Guardar los datos en una base real
