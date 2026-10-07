@@ -26,7 +26,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class ConfiguracionSeguridad {
 
     private static final String[] RUTAS_PUBLICAS = {
-            "/api/docs", "/api/docs/**", "/api/openapi", "/api/openapi/**", "/swagger-ui/**",
+            "/api/docs", "/api/docs/**", "/api/openapi", "/api/openapi/**", "/api/swagger-ui/**",
             "/actuator/health", "/error",
     };
 

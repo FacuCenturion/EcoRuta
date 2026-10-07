@@ -50,6 +50,7 @@ Todas tienen un valor por defecto para desarrollo, en `src/main/resources/applic
 
 | Variable | Para qué | Por defecto |
 | --- | --- | --- |
+| `PUERTO` | Puerto de la API | `8080` |
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | Conexión a PostgreSQL | `jdbc:postgresql://localhost:5432/ecoruta`, `ecoruta`, `ecoruta` |
 | `CORS_ORIGENES` | Desde dónde puede llamar el front | `http://localhost:5173` |
 | `SENSORES_API_KEY` | Clave del header `X-Api-Key` del emulador | `clave-de-desarrollo` |

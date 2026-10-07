@@ -1,5 +1,6 @@
 package ar.edu.uade.ecoruta.comun;
 
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -44,7 +45,10 @@ class ErroresYSeguridadTests {
 
     @Test
     void swaggerEsPublico() throws Exception {
-        mvc.perform(get("/api/docs")).andExpect(status().is(org.hamcrest.Matchers.not(401)));
+        // /api/docs redirige a la pantalla de Swagger: las dos rutas tienen que estar abiertas
+        mvc.perform(get("/api/docs")).andExpect(status().is(not(401)));
+        mvc.perform(get("/api/swagger-ui/index.html")).andExpect(status().is(not(401)));
+        mvc.perform(get("/api/openapi")).andExpect(status().is(not(401)));
     }
 
     @Test
