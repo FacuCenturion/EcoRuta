@@ -1,11 +1,20 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { puedeVer } from '../data/usuarios';
-import { IconoIncidentes, IconoIndicadores, IconoMapa, IconoPanel, IconoReportes, IconoRutas } from './Iconos';
+import {
+  IconoIncidentes,
+  IconoIndicadores,
+  IconoMapa,
+  IconoPanel,
+  IconoReportes,
+  IconoRutas,
+  IconoSensor,
+} from './Iconos';
 
 const ENLACES = [
   { ruta: '/', texto: 'Panel general', icono: <IconoPanel />, fin: true },
   { ruta: '/mapa', texto: 'Mapa en vivo', icono: <IconoMapa /> },
+  { ruta: '/sensores', texto: 'Estado de sensores', icono: <IconoSensor /> },
   { ruta: '/rutas', texto: 'Rutas y camiones', icono: <IconoRutas /> },
   { ruta: '/incidentes', texto: 'Incidentes', icono: <IconoIncidentes /> },
   { ruta: '/reportes', texto: 'Reportes vecinales', icono: <IconoReportes /> },

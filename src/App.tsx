@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { ConAcceso, RequiereSesion } from './components/RutasProtegidas';
+import EstadoSensores from './pages/EstadoSensores';
 import Incidentes from './pages/Incidentes';
 import Indicadores from './pages/Indicadores';
 import Login from './pages/Login';
@@ -15,6 +16,7 @@ export default function App() {
       <Route element={<RequiereSesion />}>
         <Route index element={<PanelGeneral />} />
         <Route path="mapa" element={<MapaEnVivo />} />
+        <Route path="sensores" element={<EstadoSensores />} />
         <Route path="rutas" element={<RutasCamiones />} />
         <Route path="incidentes" element={<Incidentes />} />
         <Route path="reportes" element={<ReportesVecinales />} />

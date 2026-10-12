@@ -1101,6 +1101,200 @@ textarea {
   flex: 1;
 }
 
+/* ---------- Estado de sensores ---------- */
+
+.sensores-resumen {
+  display: grid;
+  gap: 14px;
+}
+
+.sensores-resumen__cifra {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sensores-resumen__cifra strong {
+  font-family: var(--fuente-titulo);
+  font-size: 46px;
+  line-height: 1;
+}
+
+.sensores-resumen__cifra span {
+  color: var(--texto-suave);
+}
+
+/* Una franja por sensor agrupada por estado: se ve de un vistazo cuánto falla */
+.barra-estados {
+  display: flex;
+  height: 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #e4e1d6;
+}
+
+.barra-estados span {
+  display: block;
+  height: 100%;
+}
+
+.barra-estados span + span {
+  border-left: 2px solid var(--papel);
+}
+
+.filtro-estados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filtro-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border: 1px solid var(--linea);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.filtro-estado:hover {
+  background: #f3eee1;
+}
+
+.filtro-estado--activo {
+  border-color: var(--bosque);
+  background: var(--bosque);
+  color: #fff;
+}
+
+.filtro-estado--activo:hover {
+  background: var(--bosque-suave);
+}
+
+.filtro-estado strong {
+  font-weight: 700;
+}
+
+.sensores {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.tabla--sensores tbody th {
+  padding: 0;
+}
+
+.tabla__boton {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.tabla__boton small,
+.nivel-estimado {
+  color: var(--texto-suave);
+  font-size: 12px;
+}
+
+.nivel-estimado {
+  display: block;
+  font-weight: 400;
+}
+
+.tabla--sensores tbody tr:hover {
+  background: #f3eee1;
+}
+
+.estado-sensor--funcionando {
+  background: var(--salvia-clara);
+  color: var(--bosque);
+}
+
+.estado-sensor--irregular {
+  background: var(--ambar-claro);
+  color: #5a4310;
+}
+
+.estado-sensor--congelado {
+  background: var(--ambar);
+  color: #fff;
+}
+
+.estado-sensor--sin_senal {
+  background: #9b4a36;
+  color: #fff;
+}
+
+.detalle-sensor {
+  position: sticky;
+  top: 16px;
+}
+
+.detalle-sensor__motivo {
+  margin-bottom: 10px;
+  color: var(--texto-suave);
+}
+
+.grafico--sensor {
+  height: 220px;
+  margin-bottom: 8px;
+}
+
+.leyenda__linea.leyenda__linea--estimada {
+  border-top: 2px dashed #9b4a36;
+}
+
+.leyenda__punto--estimado {
+  border: 2px dashed #4d4a42;
+  background: transparent;
+}
+
+.datos-sensor {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.datos-sensor dt {
+  font-size: 12.5px;
+  color: var(--texto-suave);
+}
+
+.datos-sensor dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.detalle-sensor__accion {
+  padding: 10px 12px;
+  border-left: 3px solid var(--ambar);
+  background: #f5efdf;
+  font-size: 14px;
+}
+
+.nota a {
+  color: var(--bosque);
+  font-weight: 600;
+}
+
+.pin-contenedor.pin-contenedor--estimado {
+  border-style: dashed;
+  opacity: 0.75;
+}
+
 /* ---------- Pantallas más chicas ---------- */
 
 @media (max-width: 1250px) {
@@ -1109,8 +1303,12 @@ textarea {
   }
   .grilla-panel,
   .grilla-panel--abajo,
-  .detalle-camion__cuerpo {
+  .detalle-camion__cuerpo,
+  .sensores {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .detalle-sensor {
+    position: static;
   }
 }
 
@@ -1146,6 +1344,9 @@ textarea {
   }
   .lista-prioritarios {
     max-height: none;
+  }
+  .datos-sensor {
+    grid-template-columns: minmax(0, 1fr);
   }
   .mapa--grande {
     height: 60vh;

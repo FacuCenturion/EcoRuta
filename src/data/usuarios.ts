@@ -35,8 +35,8 @@ export const USUARIOS_DE_PRUEBA: Usuario[] = [
 
 // Qué pantallas puede ver cada rol. Para cambiar permisos se edita solo esta tabla.
 export const PANTALLAS_POR_ROL: Record<Rol, string[]> = {
-  director: ['/', '/mapa', '/rutas', '/incidentes', '/reportes', '/indicadores'],
-  operador: ['/', '/mapa', '/rutas', '/incidentes', '/reportes'],
+  director: ['/', '/mapa', '/sensores', '/rutas', '/incidentes', '/reportes', '/indicadores'],
+  operador: ['/', '/mapa', '/sensores', '/rutas', '/incidentes', '/reportes'],
 };
 
 export function puedeVer(rol: Rol, ruta: string): boolean {
