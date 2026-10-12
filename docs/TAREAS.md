@@ -8,8 +8,8 @@ El panel web del gerente está completo y funciona con datos simulados. El backe
 
 | Parte | Estado |
 | --- | --- |
-| Panel web del gerente (6 pantallas, mapas con las zonas oficiales) | Hecho, en `main` |
-| Pantalla de estado de sensores y detección de fallas | Hecho, en revisión en la rama `feature/estado-sensores` |
+| Panel web del gerente (7 pantallas, mapas con las zonas oficiales) | Hecho, en `main` |
+| Pantalla de estado de sensores y detección de fallas | Hecho, en `main` |
 | Backend: proyecto, base de datos y datos de ejemplo | Hecho, en `main` |
 | Backend: login, endpoints y lógica en el servidor | Sin empezar (Sprint 3) |
 | Panel conectado al backend | Sin empezar (Sprint 3) |
