@@ -1,8 +1,35 @@
 # Lista de tareas
 
-Primera etapa: **solo la sección web para el gerente del área** (dashboards y datos de sensores, por ahora ficticios). La app del chofer queda para una etapa posterior.
-
 Estado: [x] hecho, [ ] pendiente.
+
+## Estado del trabajo (12/10/2026)
+
+El panel web del gerente está completo y funciona con datos simulados. El backend tiene la base armada (tablas, datos de ejemplo, Swagger), pero todavía no tiene endpoints: el panel no lo usa. Lo que sigue es conectarlos (Sprint 3).
+
+| Parte | Estado |
+| --- | --- |
+| Panel web del gerente (6 pantallas, mapas con las zonas oficiales) | Hecho, en `main` |
+| Pantalla de estado de sensores y detección de fallas | Hecho, en revisión en la rama `feature/estado-sensores` |
+| Backend: proyecto, base de datos y datos de ejemplo | Hecho, en `main` |
+| Backend: login, endpoints y lógica en el servidor | Sin empezar (Sprint 3) |
+| Panel conectado al backend | Sin empezar (Sprint 3) |
+| Despacho a demanda con tráfico y aviso al chofer | Sin empezar (Sprint 4) |
+| App del chofer | Sin empezar (Sprint 4, versión mínima) |
+
+Para tener en cuenta:
+
+- Los datos de zonas que carga el backend quedaron viejos: se generaron antes de pasar a las zonas oficiales (empresas, comunas y ubicaciones). Se corrige con una migración nueva, ver Fase 5.
+- La rama `develop` quedó atrás de `main`: el backend y los cambios de mapas entraron directo a `main`. Hay que decidir si se sigue usando `develop` (y actualizarla) o si se trabaja con ramas que salen de `main`.
+
+Plan por sprint:
+
+| Sprint | Qué deja | Estado |
+| --- | --- | --- |
+| 1 | Panel web con datos simulados | Terminada |
+| 2 | Base del backend, zonas oficiales en el mapa y estado de sensores | Se presenta el 13/10 |
+| 3 | El panel funciona con la API y la base de datos (parte central) | Próxima |
+| 4 | Tráfico con Google, aviso al chofer y app del chofer mínima | Pendiente |
+| 5 | Indicadores desde la base, demo publicada y cierre | Pendiente |
 
 ## Fase 1: Base del proyecto
 
@@ -11,6 +38,8 @@ Estado: [x] hecho, [ ] pendiente.
 - [x] Pruebas automáticas de la lógica y de las pantallas
 - [ ] Configurar GitHub Actions para correr las pruebas en cada Pull Request
 - [ ] Proteger las ramas `main` y `develop` en GitHub
+- [x] Crear la rama `develop`
+- [ ] Decidir si se sigue con `develop` (hoy está atrás de `main`) y dejarlo escrito en `GUIA_EQUIPO.md`
 
 ## Fase 2: Datos y simulación
 
@@ -55,13 +84,31 @@ Estado: [x] hecho, [ ] pendiente.
 
 - [x] Elegir tecnología: Spring Boot con PostgreSQL, en la carpeta `backend/`
 - [x] Esqueleto del backend: migraciones con las 10 tablas, datos de ejemplo, Swagger y formato de error
-- [ ] API para recibir las lecturas de sensores
-- [ ] API de contenedores, rutas, incidentes y reportes
-- [ ] Guardar los datos en una base real
-- [ ] Conectar `SimulacionContext` con la API
+- [ ] Migración nueva (`V3`) con las zonas oficiales: empresas, comunas, color y ubicaciones; volver a generar los contenedores y camiones con `backend/scripts/exportar-semilla.ts`
+- [ ] Sumar al modelo el estado del sensor y el nivel estimado (cuando entre `feature/estado-sensores`)
 
-## Fase 6: App del chofer (etapa posterior, todavía no se desarrolla)
+Sprint 3, un bloque por integrante:
 
+- [ ] Bloque 1, login y datos: login con JWT y roles; endpoints para leer zonas, contenedores, camiones e incidentes; el login del front pasa a la API
+- [ ] Bloque 2, sensores y prioridad: recibir lecturas, detectar anomalías y fallas de sensor, calcular la prioridad en el servidor
+- [ ] Bloque 3, rutas a demanda: despacho automático y manual, con el orden de paradas por vecino más cercano
+- [ ] Bloque 4, incidentes y emulador: confirmar y descartar incidentes, reportes vecinales; el simulador pasa a mandar datos a la API; conectar `SimulacionContext` con la API
+
+Sprint 4:
+
+- [ ] Elegir la hora de salida con menos tráfico (Google Routes API, con una tabla simulada si no hay clave)
+- [ ] Notificación push al chofer cuando se le asigna una ruta (Firebase)
+- [ ] Endpoints de la app del chofer: registrar el celular, ver la ruta e iniciarla
+- [ ] Aviso al operador si el chofer no inicia la ruta a los 10 minutos
+
+Sprint 5:
+
+- [ ] Indicadores calculados desde la base
+
+## Fase 6: App del chofer (versión mínima en la Sprint 4)
+
+- [ ] Elegir la tecnología: React Native, Flutter o una web que se instala en el celular
+- [ ] Recibir la notificación de ruta nueva y abrir la ruta
 - [ ] Pantalla "Tu ruta de hoy" con las paradas ordenadas
 - [ ] Navegación y confirmación de cada contenedor recolectado
 - [ ] Reporte "No se pudo recolectar" con motivo
