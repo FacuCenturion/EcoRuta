@@ -3,7 +3,9 @@ package ar.edu.uade.ecoruta.comun;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,8 +54,34 @@ class ErroresYSeguridadTests {
     }
 
     @Test
+    void elFrontPuedeLlamarDesdeElNavegador() throws Exception {
+        // Pedido previo (preflight) que hace el navegador antes de cada llamada con token
+        mvc.perform(options("/api/v1/prueba/existe")
+                        .header("Origin", "http://localhost:5173")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "authorization"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:5173"));
+    }
+
+    @Test
+    void otroSitioNoPuedeLlamar() throws Exception {
+        mvc.perform(options("/api/v1/prueba/existe")
+                        .header("Origin", "http://sitio-ajeno.com")
+                        .header("Access-Control-Request-Method", "GET"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void elChoferNoAccedeALosDatosDelPanel() throws Exception {
+        mvc.perform(get("/api/v1/prueba/existe").with(user("chofer22").roles("CHOFER")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.codigo").value("SIN_PERMISO"));
+    }
+
+    @Test
     void recursoInexistenteResponde404() throws Exception {
-        mvc.perform(get("/api/v1/prueba/Z9-99").with(user("operador")))
+        mvc.perform(get("/api/v1/prueba/Z9-99").with(user("operador").roles("OPERADOR")))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.codigo").value("CONTENEDOR_NO_EXISTE"))
                 .andExpect(jsonPath("$.mensaje").value("No existe el contenedor Z9-99."));
@@ -61,14 +89,14 @@ class ErroresYSeguridadTests {
 
     @Test
     void accionFueraDeEstadoResponde409() throws Exception {
-        mvc.perform(post("/api/v1/prueba/decidir").with(user("operador")))
+        mvc.perform(post("/api/v1/prueba/decidir").with(user("operador").roles("OPERADOR")))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.codigo").value("INCIDENTE_YA_DECIDIDO"));
     }
 
     @Test
     void datosInvalidosResponden400() throws Exception {
-        mvc.perform(post("/api/v1/prueba/lectura").with(user("operador"))
+        mvc.perform(post("/api/v1/prueba/lectura").with(user("operador").roles("OPERADOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"llenado\": 140}"))
                 .andExpect(status().isBadRequest())
@@ -77,7 +105,7 @@ class ErroresYSeguridadTests {
 
     @Test
     void jsonRotoResponde400() throws Exception {
-        mvc.perform(post("/api/v1/prueba/lectura").with(user("operador"))
+        mvc.perform(post("/api/v1/prueba/lectura").with(user("operador").roles("OPERADOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{llenado"))
                 .andExpect(status().isBadRequest())

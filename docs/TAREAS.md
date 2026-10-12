@@ -11,14 +11,14 @@ El panel web del gerente está completo y funciona con datos simulados. El backe
 | Panel web del gerente (7 pantallas, mapas con las zonas oficiales) | Hecho, en `main` |
 | Pantalla de estado de sensores y detección de fallas | Hecho, en `main` |
 | Backend: proyecto, base de datos y datos de ejemplo | Hecho, en `main` |
-| Backend: login, endpoints y lógica en el servidor | Sin empezar (Sprint 3) |
+| Backend: login y endpoints para leer zonas, contenedores, camiones e incidentes | Hecho |
+| Backend: lecturas de sensores, prioridad, rutas e incidentes en el servidor | Sin empezar (Sprint 3) |
 | Panel conectado al backend | Sin empezar (Sprint 3) |
 | Despacho a demanda con tráfico y aviso al chofer | Sin empezar (Sprint 4) |
 | App del chofer | Sin empezar (Sprint 4, versión mínima) |
 
 Para tener en cuenta:
 
-- Los datos de zonas que carga el backend quedaron viejos: se generaron antes de pasar a las zonas oficiales (empresas, comunas y ubicaciones). Se corrige con una migración nueva, ver Fase 5.
 - La rama `develop` quedó atrás de `main`: el backend y los cambios de mapas entraron directo a `main`. Hay que decidir si se sigue usando `develop` (y actualizarla) o si se trabaja con ramas que salen de `main`.
 
 Plan por sprint:
@@ -88,12 +88,13 @@ Plan por sprint:
 
 - [x] Elegir tecnología: Spring Boot con PostgreSQL, en la carpeta `backend/`
 - [x] Esqueleto del backend: migraciones con las 10 tablas, datos de ejemplo, Swagger y formato de error
-- [ ] Migración nueva (`V3`) con las zonas oficiales: empresas, comunas, color y ubicaciones; volver a generar los contenedores y camiones con `backend/scripts/exportar-semilla.ts`
+- [x] Migración `V3` con las zonas oficiales: empresas, comunas, color y ubicaciones nuevas de contenedores y camiones
 - [ ] Sumar al modelo el estado del sensor y el nivel estimado (cuando entre `feature/estado-sensores`)
 
 Sprint 3, un bloque por integrante:
 
-- [ ] Bloque 1, login y datos: login con JWT y roles; endpoints para leer zonas, contenedores, camiones e incidentes; el login del front pasa a la API
+- [x] Bloque 1, login y datos (backend): login con JWT y roles; endpoints para leer zonas, contenedores, camiones e incidentes
+- [ ] Bloque 1, login y datos (front): el login del panel pasa a la API y se borran las contraseñas de `src/data/usuarios.ts`
 - [ ] Bloque 2, sensores y prioridad: recibir lecturas, detectar anomalías y fallas de sensor, calcular la prioridad en el servidor
 - [ ] Bloque 3, rutas a demanda: despacho automático y manual, con el orden de paradas por vecino más cercano
 - [ ] Bloque 4, incidentes y emulador: confirmar y descartar incidentes, reportes vecinales; el simulador pasa a mandar datos a la API; conectar `SimulacionContext` con la API

@@ -42,7 +42,29 @@ Al arrancar, Flyway crea las tablas y carga los datos de ejemplo. La API queda e
 | Operador | `operador` | `operador123` |
 | Chofer (uno por camión) | `chofer22`, `chofer31`, `chofer14`, `chofer17`, `chofer5`, `chofer26`, `chofer12` | `chofer123` |
 
-El login todavía no está: llega en el Paso 2 del plan. Hasta entonces todos los endpoints, salvo Swagger y el estado, responden 401.
+### Endpoints que ya funcionan
+
+| Método | Ruta | Quién | Qué devuelve |
+| --- | --- | --- | --- |
+| POST | `/api/v1/auth/login` | Público | Token y datos del usuario |
+| GET | `/api/v1/auth/me` | Cualquier usuario con token | El usuario del token |
+| GET | `/api/v1/zonas` | Director, Operador | Las 7 zonas con empresa, comunas, color, centro y base |
+| GET | `/api/v1/contenedores` | Director, Operador | Contenedores con su llenado. Filtro: `zonaId` |
+| GET | `/api/v1/contenedores/{id}` | Director, Operador | Un contenedor |
+| GET | `/api/v1/camiones` | Director, Operador | Camiones con chofer, estado y posición. Filtro: `zonaId` |
+| GET | `/api/v1/incidentes` | Director, Operador | Incidentes. Filtros: `zonaId`, `tipo`, `estado` |
+
+Para probarlos desde Swagger: llamar a `/auth/login`, copiar el `token` de la respuesta y pegarlo con el botón **Authorize**. Desde la terminal:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"usuario":"director","contrasena":"director123"}'
+
+curl http://localhost:8080/api/v1/zonas -H "Authorization: Bearer <token>"
+```
+
+Los datos todavía son los de ejemplo, quietos: el llenado empieza a moverse cuando exista el emulador de sensores.
 
 ### Variables de entorno
 
@@ -54,6 +76,7 @@ Todas tienen un valor por defecto para desarrollo, en `src/main/resources/applic
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | Conexión a PostgreSQL | `jdbc:postgresql://localhost:5432/ecoruta`, `ecoruta`, `ecoruta` |
 | `CORS_ORIGENES` | Desde dónde puede llamar el front | `http://localhost:5173` |
 | `SENSORES_API_KEY` | Clave del header `X-Api-Key` del emulador | `clave-de-desarrollo` |
+| `JWT_SECRETO` | Clave con la que se firman los tokens (32 caracteres o más) | Una de desarrollo; cambiarla al publicar la demo |
 
 ## Pruebas
 
@@ -68,14 +91,18 @@ Las pruebas que levantan la aplicación completa usan Testcontainers: crean un P
 ```
 src/main/java/ar/edu/uade/ecoruta/
   comun/        errores, seguridad y Swagger, compartidos por todos los módulos
-  (próximos)    auth, contenedores, rutas, incidentes, indicadores: un paquete por módulo de la guía
+  auth/         login, token y usuarios
+  zonas/  contenedores/  camiones/  incidentes/
+                un paquete por módulo, cada uno con su entidad, repositorio, DTO y controlador
+  (próximos)    lecturas de sensores, rutas, indicadores
 src/main/resources/
-  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo)
-scripts/        exportar-semilla.ts: genera V2 a partir de los datos del front
+  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales)
+scripts/        generan V2 y V3 a partir de los datos del front
 ```
 
 ## Reglas para no pisarse
 
 - **Nunca se edita una migración que ya está en `develop`.** Para cambiar una tabla se agrega una nueva: `V3__agregar_columna_x.sql`. Flyway compara cada archivo con lo que ya corrió y falla si alguno cambió.
 - Si dos personas crean la misma versión (dos `V3`), la segunda en hacer merge renombra la suya a `V4`.
+- Los DTO usan los mismos nombres de campo que `src/types/index.ts` del front, para que el panel pueda tipar las respuestas con lo que ya tiene.
 - Los errores se responden con `{ "codigo", "mensaje" }`. Para un 404 se lanza `RecursoNoEncontradoException` y para un 409, `EstadoInvalidoException`. Lo demás lo resuelve `ManejadorDeErrores`.
