@@ -13,8 +13,9 @@ El panel web del gerente está completo y funciona con datos simulados. El backe
 | Backend: proyecto, base de datos y datos de ejemplo | Hecho, en `main` |
 | Backend: login y endpoints para leer zonas, contenedores, camiones e incidentes | Hecho |
 | Backend: lecturas de sensores, prioridad, rutas a demanda e incidentes, con datos simulados por un emulador | Hecho |
-| Panel conectado al backend | Sin empezar (Sprint 3) |
-| Despacho a demanda con tráfico y aviso al chofer | Sin empezar (Sprint 4) |
+| Merge del backend a `main` y panel conectado | Pendiente, después del 13/10 |
+| Contenedores sobre la calle y rutas que sigan las calles | Sin empezar (Sprint 3 y 4) |
+| Tráfico y aviso al chofer | Sin empezar (Sprint 4) |
 | App del chofer | Sin empezar (Sprint 4, versión mínima) |
 
 Para tener en cuenta:
@@ -48,7 +49,7 @@ Plan por sprint:
 - [x] Simulación de llenado irregular (persona revolviendo)
 - [x] Historial simulado de 8 semanas para los indicadores
 - [x] Límites reales de las 7 zonas (unión de comunas, con los barrios de los datos abiertos del GCBA)
-- [ ] Reemplazar las posiciones de ejemplo de los contenedores por las del dataset de contenedores de la Ciudad
+- [ ] Contenedores sobre la calle: hoy aparecen dentro de las manzanas porque se ubican en una grilla que no mira las calles. Reemplazar las posiciones de ejemplo por las del dataset de contenedores de la Ciudad; si no alcanza, acercar cada punto a la calle más cercana (Roads API de Google). Entra como migración nueva del backend
 - [ ] Si la Dirección General nos pasa lecturas históricas, importarlas y comparar con el simulador
 
 ## Fase 3: Lógica del sistema
@@ -57,7 +58,7 @@ Plan por sprint:
 - [x] Rutas por zona con el vecino más cercano
 - [x] Detección de anomalías en el sensor
 - [x] Incidentes con confirmación del operador
-- [ ] Usar la API de rutas de Google Maps en lugar de la distancia en línea recta
+- [ ] Rutas por las calles: hoy se dibujan como líneas rectas entre paradas y cruzan por el medio de las casas. Pedir el recorrido a la Routes API de Google (devuelve el trazado, los km reales y la duración), guardarlo en la ruta y dibujarlo en el panel. Se hace junto con el tráfico (Sprint 4)
 - [ ] Recalcular la ruta automáticamente cuando aparece un contenedor prioritario nuevo (Release 2)
 - [x] Detección de sensores con falla usando solo el nivel de llenado: sin señal, valor congelado y lecturas irregulares
 - [x] Nivel estimado para los contenedores con el sensor caído o trabado (se usa para priorizar)
@@ -100,6 +101,7 @@ Sprint 3, un bloque por integrante:
 - [x] Pronóstico de desborde con el patrón de llenado aprendido de cada contenedor (promedio por hora y día de la semana)
 - [x] Garantía de servicio: tiempo máximo de 48 horas sin recolectar y paradas de paso
 - [ ] En el front: mostrar el motivo `tiempo`, la hora estimada de desborde y las paradas de paso
+- [ ] En el front: adaptar los tipos a la API (fechas en texto ISO, `id` numérico en incidentes) y borrar `src/logic/`, que queda duplicada con el backend
 - [x] Bloque 4, incidentes y emulador (backend): confirmar y descartar incidentes, reportes vecinales, cierre automático; emulador de sensores y choferes dentro del backend
 - [ ] Bloque 4 (front): conectar `SimulacionContext` con la API, para que el panel deje de simular
 
