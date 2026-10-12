@@ -1,0 +1,17 @@
+# Base de datos para desarrollo local: docker compose up -d
+# Los datos quedan en el volumen "datos": sobreviven a reiniciar el contenedor.
+# Para empezar de cero: docker compose down -v
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ecoruta
+      POSTGRES_USER: ecoruta
+      POSTGRES_PASSWORD: ecoruta
+    ports:
+      - "5432:5432"
+    volumes:
+      - datos:/var/lib/postgresql/data
+
+volumes:
+  datos:
