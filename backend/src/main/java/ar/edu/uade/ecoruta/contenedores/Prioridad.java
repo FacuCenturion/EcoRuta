@@ -4,16 +4,19 @@ import java.time.Duration;
 import java.time.Instant;
 
 import ar.edu.uade.ecoruta.comun.Parametros;
+import ar.edu.uade.ecoruta.contenedores.ModeloDeLlenado.Ritmo;
 
 /**
- * Decide si un contenedor hay que ir a buscarlo y por qué.
- * Es la misma regla que src/logic/prioridad.ts del front.
+ * Decide si un contenedor hay que ir a buscarlo y por qué. Parte de la regla de
+ * src/logic/prioridad.ts del front y le suma el pronóstico con el ritmo propio de
+ * cada contenedor y el tiempo máximo sin recolectar.
  */
 public final class Prioridad {
 
     public static final String MOTIVO_LLENADO = "llenado";
     public static final String MOTIVO_RIESGO = "riesgo";
     public static final String MOTIVO_REPORTE = "reporte";
+    public static final String MOTIVO_TIEMPO = "tiempo";
 
     private Prioridad() {
     }
@@ -21,11 +24,12 @@ public final class Prioridad {
     /**
      * Resultado para un contenedor.
      *
-     * @param lectura nivel con el que se decide (ver {@link #lecturaConfiable})
-     * @param motivo  por qué entra en una ruta, o null si no hace falta ir
-     * @param nivel   bajo, medio, prioritario o desborde: el color del mapa
+     * @param lectura          nivel con el que se decide (ver {@link #lecturaConfiable})
+     * @param motivo           por qué entra en una ruta, o null si no hace falta ir
+     * @param nivel            bajo, medio, prioritario o desborde: el color del mapa
+     * @param desbordeEstimado a qué hora se pronostica que desborda; null si no es en las próximas 48 h
      */
-    public record Evaluacion(double lectura, String motivo, String nivel) {
+    public record Evaluacion(double lectura, String motivo, String nivel, Instant desbordeEstimado) {
 
         public boolean esPrioritario() {
             return motivo != null;
@@ -51,18 +55,25 @@ public final class Prioridad {
     /**
      * Reglas, en orden:
      * 1. Llenado mayor o igual al 80%.
-     * 2. Riesgo de desborde: se proyecta que pasa el 95% en las próximas horas.
+     * 2. Riesgo: se pronostica que desborda en las próximas 3 horas, aunque hoy esté lejos del 80%.
      * 3. Tiene un reporte vecinal abierto.
+     * 4. Tiempo: lleva más de 48 horas sin recolectarse y no está casi vacío.
      */
-    public static String motivo(double lectura, double velocidad, Instant ahora, long reportesVecinales) {
+    public static String motivo(double lectura, Instant desbordeEstimado, Instant ahora, long reportesVecinales,
+            Instant ultimaRecoleccion) {
         if (lectura >= Parametros.UMBRAL_PRIORITARIO) {
             return MOTIVO_LLENADO;
         }
         Instant horizonte = ahora.plus(Duration.ofHours(Parametros.HORAS_DE_PROYECCION));
-        if (ModeloDeLlenado.proyectarEntre(lectura, velocidad, ahora, horizonte) >= Parametros.UMBRAL_RIESGO_PROYECTADO) {
+        if (desbordeEstimado != null && !desbordeEstimado.isAfter(horizonte)) {
             return MOTIVO_RIESGO;
         }
-        return reportesVecinales > 0 ? MOTIVO_REPORTE : null;
+        if (reportesVecinales > 0) {
+            return MOTIVO_REPORTE;
+        }
+        boolean muchoTiempo = ultimaRecoleccion != null && Duration.between(ultimaRecoleccion, ahora)
+                .compareTo(Duration.ofHours(Parametros.HORAS_MAX_SIN_RECOLECTAR)) > 0;
+        return muchoTiempo && lectura >= Parametros.NIVEL_MINIMO_POR_TIEMPO ? MOTIVO_TIEMPO : null;
     }
 
     public static String clasificarNivel(double llenado) {
@@ -75,7 +86,7 @@ public final class Prioridad {
         return llenado >= Parametros.UMBRAL_BAJO ? "medio" : "bajo";
     }
 
-    /** Un contenedor que no llegó al 80% pero corre riesgo de desbordar también se pinta como prioritario. */
+    /** Un contenedor que no llegó al 80% pero hay que ir a buscarlo también se pinta como prioritario. */
     public static String nivelVisual(double lectura, String motivo) {
         if (lectura >= Parametros.UMBRAL_DESBORDE) {
             return "desborde";
@@ -87,9 +98,11 @@ public final class Prioridad {
     }
 
     public static Evaluacion evaluar(int llenado, Integer nivelEstimado, boolean anomalia, Double promedioUltimasTres,
-            double velocidad, Instant ahora, long reportesVecinales) {
+            Ritmo ritmo, Instant ahora, long reportesVecinales, Instant ultimaRecoleccion) {
         double lectura = lecturaConfiable(llenado, nivelEstimado, anomalia, promedioUltimasTres);
-        String motivo = motivo(lectura, velocidad, ahora, reportesVecinales);
-        return new Evaluacion(lectura, motivo, nivelVisual(lectura, motivo));
+        Instant desborde = ModeloDeLlenado.momentoDeDesborde(lectura, ritmo, ahora,
+                Parametros.HORAS_MAX_DE_PRONOSTICO);
+        String motivo = motivo(lectura, desborde, ahora, reportesVecinales, ultimaRecoleccion);
+        return new Evaluacion(lectura, motivo, nivelVisual(lectura, motivo), desborde);
     }
 }

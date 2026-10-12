@@ -43,10 +43,14 @@ public class Parada {
     private OffsetDateTime horaReal;
     private String motivo; // por qué no se pudo recolectar
 
+    @Column(name = "motivo_visita")
+    private String motivoVisita; // llenado, riesgo, reporte, tiempo o de_paso
+
     protected Parada() {
     }
 
-    Parada(Ruta ruta, Contenedor contenedor, int orden, Instant eta) {
+    Parada(Ruta ruta, Contenedor contenedor, int orden, Instant eta, String motivoVisita) {
+        this.motivoVisita = motivoVisita;
         this.ruta = ruta;
         this.contenedor = contenedor;
         this.orden = orden;
@@ -90,5 +94,9 @@ public class Parada {
 
     public String getMotivo() {
         return motivo;
+    }
+
+    public String getMotivoVisita() {
+        return motivoVisita;
     }
 }

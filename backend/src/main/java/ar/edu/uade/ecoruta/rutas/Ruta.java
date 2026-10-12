@@ -83,8 +83,8 @@ public class Ruta {
         this.estado = PROGRAMADA;
     }
 
-    void agregarParada(Contenedor contenedor, Instant eta) {
-        paradas.add(new Parada(this, contenedor, paradas.size() + 1, eta));
+    void agregarParada(Contenedor contenedor, Instant eta, String motivoVisita) {
+        paradas.add(new Parada(this, contenedor, paradas.size() + 1, eta, motivoVisita));
     }
 
     void iniciar(Instant momento) {

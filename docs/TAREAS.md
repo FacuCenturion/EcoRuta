@@ -97,6 +97,9 @@ Sprint 3, un bloque por integrante:
 - [ ] Bloque 1, login y datos (front): el login del panel pasa a la API y se borran las contraseñas de `src/data/usuarios.ts`
 - [x] Bloque 2, sensores y prioridad: recibir lecturas, detectar anomalías y fallas de sensor, calcular la prioridad en el servidor
 - [x] Bloque 3, rutas a demanda: despacho automático y manual, con el orden de paradas por vecino más cercano
+- [x] Pronóstico de desborde con el patrón de llenado aprendido de cada contenedor (promedio por hora y día de la semana)
+- [x] Garantía de servicio: tiempo máximo de 48 horas sin recolectar y paradas de paso
+- [ ] En el front: mostrar el motivo `tiempo`, la hora estimada de desborde y las paradas de paso
 - [x] Bloque 4, incidentes y emulador (backend): confirmar y descartar incidentes, reportes vecinales, cierre automático; emulador de sensores y choferes dentro del backend
 - [ ] Bloque 4 (front): conectar `SimulacionContext` con la API, para que el panel deje de simular
 

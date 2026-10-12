@@ -9,13 +9,18 @@ public record RutaDto(long id, String camionId, int camionNumero, int zonaId, St
         OffsetDateTime creada, OffsetDateTime salidaProgramada, OffsetDateTime salidaReal, double kmPlanificados,
         double kmRutaFija, int duracionEstimadaMin, List<ParadaDto> paradas) {
 
-    /** Parada con los mismos nombres de campo que el tipo Parada del front. */
+    /**
+     * Parada con los mismos nombres de campo que el tipo Parada del front.
+     *
+     * @param motivoVisita por qué pasa el camión: llenado, riesgo, reporte, tiempo o de_paso
+     * @param motivo       por qué no se pudo recolectar (solo en las que quedaron no_se_pudo)
+     */
     public record ParadaDto(long id, String contenedorId, String direccion, int orden, String estado,
-            OffsetDateTime eta, OffsetDateTime horaReal, String motivo) {
+            String motivoVisita, OffsetDateTime eta, OffsetDateTime horaReal, String motivo) {
 
         public static ParadaDto de(Parada p) {
             return new ParadaDto(p.getId(), p.getContenedor().getId(), p.getContenedor().getDireccion(), p.getOrden(),
-                    p.getEstado(), Fechas.enBuenosAires(p.getEta()), Fechas.enBuenosAires(p.getHoraReal()),
+                    p.getEstado(), p.getMotivoVisita(), Fechas.enBuenosAires(p.getEta()), Fechas.enBuenosAires(p.getHoraReal()),
                     p.getMotivo());
         }
     }

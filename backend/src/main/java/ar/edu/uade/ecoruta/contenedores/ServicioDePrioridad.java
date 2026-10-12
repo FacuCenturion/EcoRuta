@@ -18,10 +18,12 @@ public class ServicioDePrioridad {
 
     private final IncidenteRepositorio incidentes;
     private final RepositorioDeLecturas lecturas;
+    private final PatronesDeLlenado patrones;
 
-    ServicioDePrioridad(IncidenteRepositorio incidentes, RepositorioDeLecturas lecturas) {
+    ServicioDePrioridad(IncidenteRepositorio incidentes, RepositorioDeLecturas lecturas, PatronesDeLlenado patrones) {
         this.incidentes = incidentes;
         this.lecturas = lecturas;
+        this.patrones = patrones;
     }
 
     /** Cuántos reportes vecinales abiertos tiene cada contenedor. */
@@ -40,8 +42,9 @@ public class ServicioDePrioridad {
         for (Contenedor c : contenedores) {
             List<Integer> tres = ultimasTres.get(c.getId());
             Double promedio = tres == null ? null : tres.stream().mapToInt(Integer::intValue).average().orElse(c.getLlenado());
+            Instant ultimaRecoleccion = c.getUltimaRecoleccionAt() == null ? null : c.getUltimaRecoleccionAt().toInstant();
             resultado.put(c.getId(), Prioridad.evaluar(c.getLlenado(), c.getNivelEstimado(), c.isAnomalia(), promedio,
-                    c.velocidad(), ahora, reportes.getOrDefault(c.getId(), 0L)));
+                    patrones.ritmoDe(c), ahora, reportes.getOrDefault(c.getId(), 0L), ultimaRecoleccion));
         }
         return resultado;
     }

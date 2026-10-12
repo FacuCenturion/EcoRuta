@@ -94,9 +94,9 @@ class HistorialInicial {
 
             Punto ultima = curva.get(curva.size() - 1);
             c.registrarLectura(ultima.nivel(), ultima.momento());
-            if (ultimaRecoleccion != null) {
-                c.registrarRecoleccion(ultimaRecoleccion);
-            }
+            // Si en estas 24 h no pasó el camión, se asume que pasó justo antes: desde ahí
+            // corre el tiempo máximo sin recolectar.
+            c.registrarRecoleccion(ultimaRecoleccion != null ? ultimaRecoleccion : curva.get(0).momento());
             curva.forEach(p -> filas.add(new LecturaNueva(c.getId(), p.nivel(), p.momento())));
         }
         lecturas.insertar(filas);

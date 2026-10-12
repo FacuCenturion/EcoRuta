@@ -60,7 +60,8 @@ public class EmuladorDeSensores {
     private static final LocalTime HORA_INICIAL = LocalTime.of(17, 0); // arranca justo antes del pico
     private static final int PASOS_DE_DESCARGA = 2;
     private static final int PASOS_POR_DIA = 24 * 60 / MINUTOS_POR_PASO;
-    private static final Duration HISTORIAL_GUARDADO = Duration.ofDays(3);
+    // Se guardan las lecturas que usa el patrón de llenado, más un día de margen
+    private static final Duration HISTORIAL_GUARDADO = Duration.ofDays(Parametros.DIAS_DE_LECTURAS_PARA_EL_PATRON + 1);
 
     private static final double PROBABILIDAD_NO_SE_PUDO = 0.08;
     private static final double PROBABILIDAD_FALLA_SENSOR = 0.01; // por paso, en algún sensor de la ciudad

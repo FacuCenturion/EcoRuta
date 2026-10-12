@@ -11,6 +11,7 @@ import ar.edu.uade.ecoruta.comun.Parametros;
 import ar.edu.uade.ecoruta.contenedores.Contenedor;
 import ar.edu.uade.ecoruta.contenedores.ContenedorRepositorio;
 import ar.edu.uade.ecoruta.contenedores.ModeloDeLlenado;
+import ar.edu.uade.ecoruta.contenedores.PatronesDeLlenado;
 
 /**
  * Deduce si cada sensor funciona mirando solo sus lecturas, y estima el nivel de los
@@ -27,10 +28,13 @@ public class ServicioDeEstadoDeSensores {
 
     private final ContenedorRepositorio contenedores;
     private final RepositorioDeLecturas lecturas;
+    private final PatronesDeLlenado patrones;
 
-    ServicioDeEstadoDeSensores(ContenedorRepositorio contenedores, RepositorioDeLecturas lecturas) {
+    ServicioDeEstadoDeSensores(ContenedorRepositorio contenedores, RepositorioDeLecturas lecturas,
+            PatronesDeLlenado patrones) {
         this.contenedores = contenedores;
         this.lecturas = lecturas;
+        this.patrones = patrones;
     }
 
     @Transactional
@@ -75,6 +79,6 @@ public class ServicioDeEstadoDeSensores {
             partida = contenedor.getUltimaRecoleccionAt().toInstant();
             nivel = Parametros.NIVEL_TRAS_RECOLECCION;
         }
-        return (int) Math.round(ModeloDeLlenado.proyectarEntre(nivel, contenedor.velocidad(), partida, ahora));
+        return (int) Math.round(ModeloDeLlenado.proyectarEntre(nivel, patrones.ritmoDe(contenedor), partida, ahora));
     }
 }

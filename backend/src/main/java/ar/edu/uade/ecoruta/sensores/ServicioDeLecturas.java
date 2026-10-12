@@ -15,6 +15,7 @@ import ar.edu.uade.ecoruta.comun.RelojDelSistema;
 import ar.edu.uade.ecoruta.comun.error.RecursoNoEncontradoException;
 import ar.edu.uade.ecoruta.contenedores.Contenedor;
 import ar.edu.uade.ecoruta.contenedores.ContenedorRepositorio;
+import ar.edu.uade.ecoruta.contenedores.PatronesDeLlenado;
 import ar.edu.uade.ecoruta.incidentes.ServicioDeIncidentes;
 
 /**
@@ -32,9 +33,12 @@ public class ServicioDeLecturas {
     private final ServicioDeEstadoDeSensores estadoDeSensores;
     private final ServicioDeIncidentes incidentes;
     private final RelojDelSistema reloj;
+    private final PatronesDeLlenado patrones;
 
     ServicioDeLecturas(ContenedorRepositorio contenedores, RepositorioDeLecturas lecturas,
-            ServicioDeEstadoDeSensores estadoDeSensores, ServicioDeIncidentes incidentes, RelojDelSistema reloj) {
+            ServicioDeEstadoDeSensores estadoDeSensores, ServicioDeIncidentes incidentes, RelojDelSistema reloj,
+            PatronesDeLlenado patrones) {
+        this.patrones = patrones;
         this.contenedores = contenedores;
         this.lecturas = lecturas;
         this.estadoDeSensores = estadoDeSensores;
@@ -72,6 +76,8 @@ public class ServicioDeLecturas {
             }
         }
 
+        // Con lecturas nuevas se puede afinar el patrón de llenado (una vez por día alcanza)
+        patrones.recalcularSiHaceFalta(ahora);
         estadoDeSensores.actualizarTodos(ahora);
         return new Resultado(nuevas.size(), anomaliasNuevas);
     }

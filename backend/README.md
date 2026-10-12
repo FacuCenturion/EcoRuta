@@ -46,10 +46,25 @@ Al arrancar, Flyway crea las tablas y carga los datos de ejemplo. La API queda e
 
 Como todavía no hay sensores en vivo, el backend trae un **emulador**: cada 4 segundos reales pasan 5 minutos simulados, los contenedores se llenan, los sensores mandan su nivel y los camiones recorren sus rutas. Con esos datos el sistema hace lo mismo que haría con datos reales:
 
-- guarda cada lectura y calcula qué contenedores son prioritarios (más del 80%, riesgo de desborde en las próximas 3 horas o reporte vecinal);
+- guarda cada lectura y aprende cómo se llena cada contenedor: su promedio por hora del día y día de la semana;
+- con ese patrón pronostica a qué hora va a desbordar cada uno;
+- calcula qué contenedores son prioritarios (ver abajo);
 - detecta lecturas irregulares y sensores sin señal o congelados, y les estima el nivel;
 - despacha un camión cuando una zona tiene 3 o más contenedores prioritarios o uno desbordado;
 - abre incidentes y los cierra solos cuando se resuelven.
+
+Un contenedor es prioritario por uno de estos motivos, en este orden:
+
+| Motivo | Regla |
+| --- | --- |
+| `llenado` | Está al 80% o más |
+| `riesgo` | Se pronostica que desborda en las próximas 3 horas, aunque hoy esté lejos del 80% |
+| `reporte` | Tiene un reporte vecinal abierto |
+| `tiempo` | Lleva más de 48 horas sin recolectarse y está al 20% o más |
+
+Cuando un camión sale, además suma **paradas de paso**: contenedores al 50% o más que quedan a menos de 300 m de alguna parada. Cada parada de la ruta guarda por qué se pasa por ahí (`motivoVisita`).
+
+El patrón de llenado se recalcula una vez por día con las lecturas de las últimas dos semanas. Donde todavía no hay datos suficientes se usa un ritmo fijo (pico de 18 a 21). Con el emulador, el patrón aprendido termina siendo parecido al fijo, porque el emulador llena los contenedores con ese mismo ritmo: la diferencia va a aparecer con sensores reales.
 
 El emulador solo sabe lo que sabría el mundo real (cuánto se llenó cada contenedor, qué sensor se rompió). Al sistema le llega únicamente lo que mandaría un sensor: contenedor, nivel y hora. El día que haya sensores reales se apaga con `EMULADOR_ACTIVO=false` y las lecturas entran por `POST /api/v1/lecturas`.
 
@@ -71,7 +86,7 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | POST | `/auth/login` | Público. Devuelve el token y los datos del usuario |
 | GET | `/auth/me` | El usuario del token (cualquier rol) |
 | GET | `/zonas` | Las 7 zonas con empresa, comunas, color, centro y base |
-| GET | `/contenedores` | Contenedores con llenado, nivel, motivo de prioridad y estado del sensor. Filtro: `zonaId` |
+| GET | `/contenedores` | Contenedores con llenado, nivel, motivo de prioridad, estado del sensor y hora estimada de desborde. Filtro: `zonaId` |
 | GET | `/contenedores/prioritarios` | Los que hay que ir a buscar, del más lleno al menos lleno. Filtro: `zonaId` |
 | GET | `/contenedores/{id}` | Un contenedor |
 | GET | `/contenedores/{id}/lecturas` | Lecturas del sensor para dibujar la curva. Parámetro: `horas` (24 por defecto) |
@@ -127,14 +142,14 @@ src/main/java/ar/edu/uade/ecoruta/
   auth/         login, token y usuarios
   zonas/  camiones/  incidentes/
                 un paquete por módulo, cada uno con su entidad, repositorio, DTO y controlador
-  contenedores/ además tiene el modelo de llenado y la regla de prioridad
+  contenedores/ además tiene el patrón de llenado aprendido, el pronóstico y la regla de prioridad
   sensores/     entrada de lecturas, detección de anomalías y estado de cada sensor
   rutas/        despacho a demanda, orden de paradas y avance de la ruta
   panel/        números del día para el Panel general
   emulador/     hace de sensores y choferes mientras no haya datos en vivo
   (próximos)    tráfico, aviso al chofer, indicadores
 src/main/resources/
-  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj)
+  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj, V5 patrón de llenado)
 scripts/        generan V2 y V3 a partir de los datos del front
 ```
 
@@ -142,7 +157,7 @@ scripts/        generan V2 y V3 a partir de los datos del front
 
 - **Nunca se edita una migración que ya está en `develop`.** Para cambiar una tabla se agrega una nueva: `V3__agregar_columna_x.sql`. Flyway compara cada archivo con lo que ya corrió y falla si alguno cambió.
 - Si dos personas crean la misma versión (dos `V3`), la segunda en hacer merge renombra la suya a `V4`.
-- La lógica de prioridad, llenado, anomalías, sensores y rutas es la misma que la de `src/logic/` del front. Si se cambia una regla, hay que cambiarla en los dos lados hasta que el panel lea todo de la API. Los umbrales están en `comun/Parametros.java`.
+- La lógica de anomalías, sensores y orden de rutas es la misma que la de `src/logic/` del front. La prioridad parte de la del front y le suma el pronóstico con el patrón aprendido, el motivo `tiempo` y las paradas de paso, que el front todavía no conoce. Si se cambia una regla, hay que cambiarla en los dos lados hasta que el panel lea todo de la API. Los umbrales están en `comun/Parametros.java`.
 - Para saber qué hora es, el código usa siempre `RelojDelSistema.ahora()`, nunca la hora de la máquina: así funciona igual con la hora simulada y con la real.
 - Los DTO usan los mismos nombres de campo que `src/types/index.ts` del front, para que el panel pueda tipar las respuestas con lo que ya tiene.
 - Los errores se responden con `{ "codigo", "mensaje" }`. Para un 404 se lanza `RecursoNoEncontradoException` y para un 409, `EstadoInvalidoException`. Lo demás lo resuelve `ManejadorDeErrores`.

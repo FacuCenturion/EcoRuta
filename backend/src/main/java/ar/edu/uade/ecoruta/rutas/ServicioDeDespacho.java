@@ -2,7 +2,6 @@ package ar.edu.uade.ecoruta.rutas;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +23,8 @@ import ar.edu.uade.ecoruta.contenedores.Prioridad.Evaluacion;
 import ar.edu.uade.ecoruta.contenedores.ServicioDePrioridad;
 import ar.edu.uade.ecoruta.rutas.PlanificadorDeRutas.Punto;
 import ar.edu.uade.ecoruta.rutas.PlanificadorDeRutas.RutaPlanificada;
+import ar.edu.uade.ecoruta.rutas.SeleccionDeParadas.Eleccion;
+import ar.edu.uade.ecoruta.rutas.SeleccionDeParadas.Opcion;
 import ar.edu.uade.ecoruta.zonas.Zona;
 import ar.edu.uade.ecoruta.zonas.ZonaRepositorio;
 
@@ -63,13 +64,13 @@ public class ServicioDeDespacho {
                 .map(camion -> {
                     List<Contenedor> deLaZona = contenedores.findByZonaIdAndActivoTrueOrderById(camion.getZonaId());
                     Map<String, Evaluacion> evaluaciones = prioridad.evaluar(deLaZona, ahora);
-                    List<Contenedor> candidatos = candidatos(deLaZona, evaluaciones);
-                    boolean hayDesbordado = candidatos.stream()
-                            .anyMatch(c -> evaluaciones.get(c.getId()).lectura() >= Parametros.UMBRAL_DESBORDE);
-                    if (candidatos.size() < Parametros.MIN_PARADAS_PARA_SALIR && !hayDesbordado) {
+                    long prioritarios = evaluaciones.values().stream().filter(Evaluacion::esPrioritario).count();
+                    boolean hayDesbordado = evaluaciones.values().stream()
+                            .anyMatch(e -> e.lectura() >= Parametros.UMBRAL_DESBORDE);
+                    if (prioritarios < Parametros.MIN_PARADAS_PARA_SALIR && !hayDesbordado) {
                         return null;
                     }
-                    return crear(camion, zonaPorId.get(camion.getZonaId()), deLaZona, candidatos, Ruta.AUTOMATICO, ahora);
+                    return crear(camion, zonaPorId.get(camion.getZonaId()), deLaZona, evaluaciones, Ruta.AUTOMATICO, ahora);
                 })
                 .filter(ruta -> ruta != null)
                 .toList();
@@ -88,34 +89,35 @@ public class ServicioDeDespacho {
                         "El camión de la zona " + zonaId + " ya tiene una ruta o todavía no volvió a la base."));
 
         List<Contenedor> deLaZona = contenedores.findByZonaIdAndActivoTrueOrderById(zonaId);
-        List<Contenedor> candidatos = candidatos(deLaZona, prioridad.evaluar(deLaZona, ahora));
-        if (candidatos.isEmpty()) {
+        Map<String, Evaluacion> evaluaciones = prioridad.evaluar(deLaZona, ahora);
+        if (evaluaciones.values().stream().noneMatch(Evaluacion::esPrioritario)) {
             throw new EstadoInvalidoException("SIN_CONTENEDORES_PRIORITARIOS",
                     "En la zona " + zonaId + " no hay contenedores para recolectar ahora.");
         }
-        return crear(camion, zona, deLaZona, candidatos, Ruta.MANUAL, ahora);
+        return crear(camion, zona, deLaZona, evaluaciones, Ruta.MANUAL, ahora);
     }
 
     private Set<String> camionesConRutaActiva() {
         return rutas.activas().stream().map(r -> r.getCamion().getId()).collect(Collectors.toSet());
     }
 
-    // Los prioritarios de la zona, del más lleno al menos lleno, hasta el máximo de paradas
-    private static List<Contenedor> candidatos(List<Contenedor> deLaZona, Map<String, Evaluacion> evaluaciones) {
-        return deLaZona.stream()
-                .filter(c -> evaluaciones.get(c.getId()).esPrioritario())
-                .sorted(Comparator.comparingDouble((Contenedor c) -> evaluaciones.get(c.getId()).lectura()).reversed())
-                .limit(Parametros.MAX_PARADAS_POR_RUTA)
-                .toList();
-    }
-
-    private Ruta crear(Camion camion, Zona zona, List<Contenedor> deLaZona, List<Contenedor> candidatos, String origen,
-            Instant ahora) {
+    private Ruta crear(Camion camion, Zona zona, List<Contenedor> deLaZona, Map<String, Evaluacion> evaluaciones,
+            String origen, Instant ahora) {
         Coordenada base = new Coordenada(zona.getBaseLat(), zona.getBaseLng());
-        Map<String, Contenedor> porId = candidatos.stream().collect(Collectors.toMap(Contenedor::getId, Function.identity()));
-        RutaPlanificada plan = PlanificadorDeRutas.planificar(base, aPuntos(candidatos));
+        Map<String, Contenedor> porId = deLaZona.stream().collect(Collectors.toMap(Contenedor::getId, Function.identity()));
+
+        // Prioritarios más las paradas de paso que quedan cerca
+        List<Eleccion> elegidos = SeleccionDeParadas.elegir(deLaZona.stream()
+                .map(c -> new Opcion(c.getId(), c.posicion(), evaluaciones.get(c.getId()).lectura(),
+                        evaluaciones.get(c.getId()).motivo()))
+                .toList());
+        Map<String, String> motivoVisita = elegidos.stream().collect(Collectors.toMap(Eleccion::id, Eleccion::motivoVisita));
+
+        RutaPlanificada plan = PlanificadorDeRutas.planificar(base,
+                elegidos.stream().map(e -> new Punto(e.id(), porId.get(e.id()).posicion())).toList());
         // Lo que se habría recorrido visitando todos los contenedores, para medir el ahorro
-        double kmRutaFija = PlanificadorDeRutas.planificar(base, aPuntos(deLaZona)).km();
+        double kmRutaFija = PlanificadorDeRutas
+                .planificar(base, deLaZona.stream().map(c -> new Punto(c.getId(), c.posicion())).toList()).km();
 
         double minutos = plan.km() / Parametros.VELOCIDAD_CAMION_KMH * 60
                 + (double) plan.orden().size() * Parametros.MINUTOS_POR_PARADA;
@@ -129,12 +131,8 @@ public class ServicioDeDespacho {
                     / Parametros.VELOCIDAD_CAMION_KMH * 60;
             reloj = reloj.plus(Duration.ofSeconds(Math.round((viajeMin + Parametros.MINUTOS_POR_PARADA) * 60)));
             posicion = contenedor.posicion();
-            ruta.agregarParada(contenedor, reloj);
+            ruta.agregarParada(contenedor, reloj, motivoVisita.get(id));
         }
         return rutas.save(ruta);
-    }
-
-    private static List<Punto> aPuntos(List<Contenedor> lista) {
-        return lista.stream().map(c -> new Punto(c.getId(), c.posicion())).toList();
     }
 }
