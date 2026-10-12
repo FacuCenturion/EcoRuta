@@ -43,6 +43,7 @@ Un prefijo y una frase corta:
 | Cambiar cómo se arman las rutas          | `src/logic/rutas.ts`                     |
 | Cambiar cómo se llenan los contenedores  | `src/logic/llenado.ts`                   |
 | Agregar zonas, calles o camiones         | `src/data/zonas.ts`, `src/data/semilla.ts` |
+| Cambiar los límites de las zonas         | `scripts/generar_limites_zonas.py` (genera `src/data/limites-zonas.json`) |
 | Agregar un tipo de incidente             | `src/types/index.ts` y `src/simulator/simulador.ts` |
 | Agregar una pantalla                     | `src/pages/` y la ruta en `src/App.tsx`  |
 | Cambiar colores y estilos                | `src/styles/global.css`                  |

@@ -18,7 +18,8 @@ Estado: [x] hecho, [ ] pendiente.
 - [x] Simulador de sensores con pico de llenado entre las 18 y las 21 h
 - [x] Simulación de llenado irregular (persona revolviendo)
 - [x] Historial simulado de 8 semanas para los indicadores
-- [ ] Reemplazar las posiciones aproximadas por los datos abiertos del Gobierno de la Ciudad (zonas y contenedores)
+- [x] Límites reales de las 7 zonas (unión de comunas, con los barrios de los datos abiertos del GCBA)
+- [ ] Reemplazar las posiciones de ejemplo de los contenedores por las del dataset de contenedores de la Ciudad
 - [ ] Si la Dirección General nos pasa lecturas históricas, importarlas y comparar con el simulador
 
 ## Fase 3: Lógica del sistema
@@ -45,7 +46,8 @@ Estado: [x] hecho, [ ] pendiente.
 - [x] Mapa con Google Maps (con mapa alternativo si no hay clave)
 - [ ] Crear la clave de Google Maps del equipo, restringirla y cargarla en cada `.env.local`
 - [ ] Crear un Map ID propio en Google Cloud y reemplazar `DEMO_MAP_ID` en `src/components/mapa/MapaGoogle.tsx`
-- [ ] Estilo del mapa más claro, con las zonas dibujadas, como en el Figma
+- [x] Zonas dibujadas en el mapa con su color (en Google Maps y en el mapa alternativo)
+- [ ] Estilo del mapa más claro, como en el Figma
 - [ ] Login real validado por el backend
 - [ ] Probar en celular y en distintos navegadores
 

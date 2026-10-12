@@ -14,7 +14,7 @@ import {
 } from '../logic/indicadores';
 import { obtenerHistorial } from '../logic/historial';
 import { formatearDecimal, formatearNumero } from '../utils/formato';
-import { vistaParaZona } from '../utils/vista';
+import { vistaParaZona, zonasParaFiltro } from '../utils/vista';
 
 export default function PanelGeneral() {
   const { estado, zonaFiltro } = useSimulacion();
@@ -88,6 +88,7 @@ export default function PanelGeneral() {
             camiones={camiones}
             relojMs={estado.relojMs}
             vista={vistaParaZona(zonaFiltro)}
+            zonas={zonasParaFiltro(zonaFiltro)}
           />
           <p className="nota">{formatearNumero(contenedores.length)} contenedores con sensor (datos simulados)</p>
         </section>

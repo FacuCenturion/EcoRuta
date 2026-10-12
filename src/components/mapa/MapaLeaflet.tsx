@@ -1,9 +1,19 @@
 import L from 'leaflet';
 import { useEffect } from 'react';
-import { CircleMarker, MapContainer, Marker, Polyline, Popup, TileLayer, useMap } from 'react-leaflet';
+import {
+  CircleMarker,
+  MapContainer,
+  Marker,
+  Polygon,
+  Polyline,
+  Popup,
+  TileLayer,
+  Tooltip,
+  useMap,
+} from 'react-leaflet';
 import { diaDeSemana } from '../../logic/llenado';
 import { motivoDelContenedor, nivelVisual } from '../../logic/prioridad';
-import { COLOR_NIVEL } from '../../utils/colores';
+import { BORDE_ZONA, COLOR_NIVEL, OPACIDAD_ZONA } from '../../utils/colores';
 import InfoContenedor from './InfoContenedor';
 import type { PropsMapa, Vista } from './tipos';
 
@@ -34,6 +44,7 @@ export default function MapaLeaflet({
   seleccionadoId,
   recorridoHecho,
   recorridoPendiente,
+  zonas = [],
   className = 'mapa',
 }: PropsMapa) {
   const fecha = new Date(relojMs);
@@ -47,6 +58,25 @@ export default function MapaLeaflet({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <AjustarVista vista={vista} />
+
+      {zonas.map((zona) => (
+        <Polygon
+          key={zona.id}
+          // Cada parte va como un polígono aparte (si no, Leaflet la toma como un hueco)
+          positions={zona.limites.map((parte) => [parte.map((p) => [p.lat, p.lng] as [number, number])])}
+          pathOptions={{
+            color: BORDE_ZONA,
+            weight: 1.5,
+            opacity: 0.8,
+            fillColor: zona.color,
+            fillOpacity: OPACIDAD_ZONA,
+          }}
+        >
+          <Tooltip sticky>
+            <strong>Zona {zona.id}</strong> · {zona.empresa}
+          </Tooltip>
+        </Polygon>
+      ))}
 
       {recorridoHecho && recorridoHecho.length > 1 && (
         <Polyline positions={recorridoHecho.map((p) => [p.lat, p.lng])} pathOptions={{ color: '#7c8576', weight: 4 }} />

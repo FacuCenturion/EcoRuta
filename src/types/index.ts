@@ -6,9 +6,13 @@ export interface Coordenada {
 export interface Zona {
   id: number;
   empresa: string;
-  centro: Coordenada;
+  comunas: number[];
+  color: string; // mismo color que el mapa oficial de zonas
+  centro: Coordenada; // sector donde están los contenedores de la demo
   base: Coordenada; // playón desde el que salen los camiones
   calles: string[];
+  callesLimite: string[]; // calles que separan la zona de las vecinas
+  limites: Coordenada[][]; // contorno de la zona (puede tener más de una parte)
 }
 
 export type NivelLlenado = 'bajo' | 'medio' | 'prioritario' | 'desborde';

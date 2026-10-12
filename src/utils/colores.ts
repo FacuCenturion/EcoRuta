@@ -14,3 +14,7 @@ export const ETIQUETA_NIVEL: Record<NivelLlenado, string> = {
   prioritario: 'Prioritario',
   desborde: 'Desborde',
 };
+
+// Contorno de las zonas en el mapa: relleno suave para que se sigan viendo las calles
+export const BORDE_ZONA = '#4d5a52';
+export const OPACIDAD_ZONA = 0.22;

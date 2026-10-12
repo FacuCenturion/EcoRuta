@@ -158,6 +158,7 @@ function DetalleCamion({ camion }: { camion: Camion }) {
             vista={{ lat: zona.centro.lat, lng: zona.centro.lng, zoom: 15 }}
             recorridoHecho={recorridoHecho}
             recorridoPendiente={recorridoPendiente}
+            zonas={[zona]}
           />
         </section>
 

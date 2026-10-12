@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { crearContenedores } from '../data/semilla';
+import { ZONAS, zonaDeUbicacion } from '../data/zonas';
 import { avanzar, crearEstadoInicial, decidirIncidente } from '../simulator/simulador';
 import { detectarAnomalia } from './anomalias';
 import { generarHistorial } from './historial';
@@ -142,6 +143,34 @@ describe('indicadores del día', () => {
     Object.values(historial.eficienciaPorZona).forEach((indice) => {
       expect(indice).toBeGreaterThan(0);
       expect(indice).toBeLessThanOrEqual(100);
+    });
+  });
+});
+
+describe('zonas', () => {
+  it('ubica lugares conocidos en la zona correcta', () => {
+    expect(zonaDeUbicacion({ lat: -34.6037, lng: -58.3816 })?.id).toBe(1); // Obelisco
+    expect(zonaDeUbicacion({ lat: -34.5813, lng: -58.421 })?.id).toBe(2); // Plaza Italia
+    expect(zonaDeUbicacion({ lat: -34.6006, lng: -58.5133 })?.id).toBe(3); // Plaza Arenales, Devoto
+    expect(zonaDeUbicacion({ lat: -34.6354, lng: -58.5207 })?.id).toBe(4); // Estadio de Vélez
+    expect(zonaDeUbicacion({ lat: -34.664, lng: -58.456 })?.id).toBe(5); // Parque Indoamericano
+    expect(zonaDeUbicacion({ lat: -34.6066, lng: -58.4357 })?.id).toBe(6); // Parque Centenario
+    expect(zonaDeUbicacion({ lat: -34.6393, lng: -58.3626 })?.id).toBe(7); // Caminito
+  });
+
+  it('un punto fuera de la Ciudad no pertenece a ninguna zona', () => {
+    expect(zonaDeUbicacion({ lat: -34.66, lng: -58.56 })).toBeUndefined(); // Ramos Mejía
+  });
+
+  it('la base de cada zona queda dentro de su zona', () => {
+    ZONAS.forEach((zona) => {
+      expect(zonaDeUbicacion(zona.base)?.id).toBe(zona.id);
+    });
+  });
+
+  it('cada contenedor está dentro de la zona que tiene asignada', () => {
+    crearContenedores(2026).forEach((contenedor) => {
+      expect(zonaDeUbicacion(contenedor.posicion)?.id).toBe(contenedor.zonaId);
     });
   });
 });

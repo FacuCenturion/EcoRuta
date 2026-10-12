@@ -1,4 +1,4 @@
-import type { Camion, Contenedor, Coordenada } from '../../types';
+import type { Camion, Contenedor, Coordenada, Zona } from '../../types';
 
 export interface Vista {
   lat: number;
@@ -15,5 +15,6 @@ export interface PropsMapa {
   seleccionadoId?: string;
   recorridoHecho?: Coordenada[];
   recorridoPendiente?: Coordenada[];
+  zonas?: Zona[]; // zonas que se dibujan con su contorno
   className?: string;
 }

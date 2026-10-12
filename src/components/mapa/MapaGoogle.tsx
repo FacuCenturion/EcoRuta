@@ -4,13 +4,14 @@ import {
   APIProvider,
   InfoWindow,
   Map as MapaDeGoogle,
+  Polygon,
   Polyline,
   useMap,
 } from '@vis.gl/react-google-maps';
 import { useEffect, useState } from 'react';
 import { diaDeSemana } from '../../logic/llenado';
 import { motivoDelContenedor, nivelVisual } from '../../logic/prioridad';
-import { COLOR_NIVEL } from '../../utils/colores';
+import { BORDE_ZONA, COLOR_NIVEL, OPACIDAD_ZONA } from '../../utils/colores';
 import InfoContenedor from './InfoContenedor';
 import type { PropsMapa, Vista } from './tipos';
 
@@ -38,6 +39,7 @@ export default function MapaGoogle({
   seleccionadoId,
   recorridoHecho,
   recorridoPendiente,
+  zonas = [],
   className = 'mapa',
 }: Props) {
   const [abiertoId, setAbiertoId] = useState<string>();
@@ -66,6 +68,19 @@ export default function MapaGoogle({
         fullscreenControl={false}
       >
         <AjustarVista vista={vista} />
+
+        {zonas.map((zona) => (
+          <Polygon
+            key={zona.id}
+            paths={zona.limites}
+            fillColor={zona.color}
+            fillOpacity={OPACIDAD_ZONA}
+            strokeColor={BORDE_ZONA}
+            strokeOpacity={0.8}
+            strokeWeight={1.5}
+            clickable={false}
+          />
+        ))}
 
         {recorridoHecho && recorridoHecho.length > 1 && (
           <Polyline path={recorridoHecho} strokeColor="#7c8576" strokeWeight={5} strokeOpacity={0.9} />

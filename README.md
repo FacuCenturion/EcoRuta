@@ -76,7 +76,20 @@ npm run build     # versión para producción
 2. **Priorización** (`src/logic/prioridad.ts`): un contenedor entra en la próxima ronda si supera el 80%, si va a pasar el 95% antes de la ronda siguiente (riesgo de desborde) o si tiene un reporte vecinal abierto.
 3. **Rutas** (`src/logic/rutas.ts`): para cada camión se ordenan las paradas con el algoritmo del vecino más cercano, partiendo y volviendo a la base de la zona.
 4. **Anomalías** (`src/logic/anomalias.ts`): si un sensor sube y baja de golpe (por ejemplo, alguien revolviendo la basura) se genera una alerta. No dispara ninguna acción: un operador la revisa y confirma.
-5. **Estado compartido** (`src/context/SimulacionContext.tsx`): todas las pantallas leen los datos de acá.
+5. **Zonas** (`src/data/zonas.ts`): cada zona tiene la empresa a cargo y su contorno, que se dibuja en los mapas. Los contornos salen de unir las comunas de cada zona según el mapa oficial del Servicio de Higiene Urbana:
+
+   | Zona | Empresa | Comunas | Límites con las zonas vecinas |
+   | --- | --- | --- | --- |
+   | 1 | AESA Aseo y Ecología | 1 | Uruguay, Av. Córdoba, Av. Entre Ríos, Av. Caseros, Av. Brasil |
+   | 2 | Cliba Ingeniería Urbana | 2, 13, 14 | Uruguay, Av. Córdoba, Av. Cabildo, Larralde, Zapiola, Monroe, Rómulo Naón, Av. Álvarez Thomas |
+   | 3 | IMPSA Ambiental | 11, 12, 15 | Av. Cabildo a Av. Álvarez Thomas (con la 2), Av. Córdoba, Av. Ángel Gallardo, Av. San Martín, Av. Lope de Vega, Baigorria, Joaquín V. González |
+   | 4 | Ecohabitat - UTE | 9, 10 | Av. Lope de Vega, Baigorria, Joaquín V. González, Portela, Av. Castañares, Av. Eva Perón, Av. Escalada |
+   | 5 | Ente de Higiene Urbana | 8 | Av. Eva Perón, Av. Escalada, Av. Perito Moreno, Av. Varela |
+   | 6 | Ashira Martín y Martín - UTE | 5, 6, 7 | Av. Ángel Gallardo, Av. San Martín, Portela, Av. Castañares, Av. Perito Moreno, Av. Riestra, Av. Caseros, Sánchez de Loria |
+   | 7 | Transportes Olivos - Urbaser - UTE | 3, 4 | Av. Córdoba, Sánchez de Loria, Av. Caseros, Av. Riestra, Av. Varela, Av. Entre Ríos, Av. Brasil |
+
+   Para regenerar los contornos: `pip install shapely` y `python scripts/generar_limites_zonas.py`.
+6. **Estado compartido** (`src/context/SimulacionContext.tsx`): todas las pantallas leen los datos de acá.
 
 ## Estructura
 
@@ -84,18 +97,19 @@ npm run build     # versión para producción
 src/
   components/   piezas que se reutilizan (mapa, tarjetas, menú); mapa/ tiene Google Maps y el mapa alternativo
   context/      estado del sistema que leen las pantallas
-  data/         zonas, contenedores y camiones de ejemplo
+  data/         zonas (con sus límites en limites-zonas.json), contenedores y camiones de ejemplo
   logic/        priorización, rutas, anomalías, indicadores e historial
   pages/        una carpeta de código por pantalla
   simulator/    simulador de sensores y camiones
   styles/       estilos globales
   utils/        funciones auxiliares (formatos, números aleatorios, colores)
 docs/           guía del equipo y lista de tareas
+scripts/        generar_limites_zonas.py, arma limites-zonas.json a partir de los barrios del GCBA
 ```
 
 ## Limitaciones conocidas
 
-- Las posiciones, calles y zonas son aproximadas, sirven para la demo.
+- Los límites de las zonas son los oficiales (unión de comunas), pero las posiciones de los contenedores, las bases y las calles son de ejemplo.
 - Las distancias se calculan en línea recta; en la calle serían algo más largas.
 - Todavía no hay backend ni base de datos: al recargar la página la simulación vuelve a empezar.
 - El login es de prueba (ver arriba).

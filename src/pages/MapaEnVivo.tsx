@@ -7,7 +7,7 @@ import { diaDeSemana } from '../logic/llenado';
 import { etiquetaMotivo, lecturaConfiable, nivelVisual } from '../logic/prioridad';
 import Leyenda from '../components/Leyenda';
 import { COLOR_NIVEL } from '../utils/colores';
-import { vistaParaZona } from '../utils/vista';
+import { vistaParaZona, zonasParaFiltro } from '../utils/vista';
 
 type Filtro = 'todos' | 'prioritarios';
 
@@ -68,6 +68,7 @@ export default function MapaEnVivo() {
             relojMs={estado.relojMs}
             vista={foco ?? vistaParaZona(zonaFiltro)}
             seleccionadoId={seleccionadoId}
+            zonas={zonasParaFiltro(zonaFiltro)}
           />
         </section>
 
