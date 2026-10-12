@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import Leyenda from '../components/Leyenda';
 import Encabezado from '../components/Encabezado';
@@ -12,6 +13,7 @@ import {
   esAbierto,
   kgCo2,
 } from '../logic/indicadores';
+import { sensorConfiable } from '../logic/estadoSensor';
 import { obtenerHistorial } from '../logic/historial';
 import { formatearDecimal, formatearNumero } from '../utils/formato';
 import { vistaParaZona, zonasParaFiltro } from '../utils/vista';
@@ -31,6 +33,7 @@ export default function PanelGeneral() {
   const abiertos = incidentes.filter((i) => esAbierto(i.estado)).length;
   const pendientes = incidentes.filter((i) => i.estado === 'pendiente').length;
   const kmEvitados = estado.kmEvitadosHoy;
+  const sensoresMidiendo = contenedores.filter((c) => sensorConfiable(c.estadoSensor)).length;
   const porcentajeHecho = estado.planificadosHoy ? Math.round((estado.recolectadosHoy / estado.planificadosHoy) * 100) : 0;
 
   const historial = obtenerHistorial();
@@ -90,7 +93,10 @@ export default function PanelGeneral() {
             vista={vistaParaZona(zonaFiltro)}
             zonas={zonasParaFiltro(zonaFiltro)}
           />
-          <p className="nota">{formatearNumero(contenedores.length)} contenedores con sensor (datos simulados)</p>
+          <p className="nota">
+            {formatearNumero(sensoresMidiendo)} de {formatearNumero(contenedores.length)} sensores midiendo (datos
+            simulados). <Link to="/sensores">Ver estado de sensores</Link>
+          </p>
         </section>
 
         <ParaRevisar />

@@ -1,4 +1,5 @@
-import { etiquetaMotivo, type MotivoPrioridad } from '../../logic/prioridad';
+import { ETIQUETA_ESTADO_SENSOR } from '../../logic/estadoSensor';
+import { etiquetaMotivo, lecturaConfiable, type MotivoPrioridad } from '../../logic/prioridad';
 import type { Contenedor, NivelLlenado } from '../../types';
 import { ETIQUETA_NIVEL } from '../../utils/colores';
 import { formatearHora } from '../../utils/formato';
@@ -17,7 +18,8 @@ export default function InfoContenedor({ contenedor, nivel, motivo }: Props) {
       <br />
       Zona {contenedor.zonaId} · {contenedor.id}
       <br />
-      Llenado: {Math.round(contenedor.llenado)}% ({ETIQUETA_NIVEL[nivel]})
+      Llenado: {Math.round(lecturaConfiable(contenedor))}%
+      {contenedor.nivelEstimado !== undefined ? ' estimado' : ''} ({ETIQUETA_NIVEL[nivel]})
       <br />
       Se llena a {contenedor.velocidad}% por hora
       <br />
@@ -28,10 +30,10 @@ export default function InfoContenedor({ contenedor, nivel, motivo }: Props) {
           Prioridad: {etiquetaMotivo(motivo)}
         </>
       )}
-      {contenedor.anomalia && (
+      {contenedor.estadoSensor !== 'funcionando' && (
         <>
           <br />
-          Lecturas irregulares del sensor
+          Sensor: {ETIQUETA_ESTADO_SENSOR[contenedor.estadoSensor].toLowerCase()}
         </>
       )}
     </div>

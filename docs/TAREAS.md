@@ -30,7 +30,9 @@ Estado: [x] hecho, [ ] pendiente.
 - [x] Incidentes con confirmación del operador
 - [ ] Usar la API de rutas de Google Maps en lugar de la distancia en línea recta
 - [ ] Recalcular la ruta automáticamente cuando aparece un contenedor prioritario nuevo (Release 2)
-- [ ] Detección de sensores con falla (Release 2)
+- [x] Detección de sensores con falla usando solo el nivel de llenado: sin señal, valor congelado y lecturas irregulares
+- [x] Nivel estimado para los contenedores con el sensor caído o trabado (se usa para priorizar)
+- [ ] Detectar el sensor que no baja después de una recolección confirmada (cuando exista la app del chofer)
 
 ## Fase 4: Pantallas del panel web
 
@@ -40,6 +42,7 @@ Estado: [x] hecho, [ ] pendiente.
 - [x] Incidentes
 - [x] Reportes vecinales
 - [x] Indicadores
+- [x] Estado de sensores: resumen, lista por estado y curva de las últimas 24 h de cada sensor
 - [x] Ajustar las pantallas al diseño de Figma (Panel general, Indicadores, Rutas y camiones)
 - [ ] Revisar con el equipo los detalles visuales que falten, ya con la página abierta en el navegador
 - [x] Login simple con roles Director y Operador (usuarios de prueba, sin backend)
@@ -47,6 +50,7 @@ Estado: [x] hecho, [ ] pendiente.
 - [ ] Crear la clave de Google Maps del equipo, restringirla y cargarla en cada `.env.local`
 - [ ] Crear un Map ID propio en Google Cloud y reemplazar `DEMO_MAP_ID` en `src/components/mapa/MapaGoogle.tsx`
 - [x] Zonas dibujadas en el mapa con su color (en Google Maps y en el mapa alternativo)
+- [x] Contenedores con nivel estimado marcados con borde punteado en los mapas
 - [ ] Estilo del mapa más claro, como en el Figma
 - [ ] Login real validado por el backend
 - [ ] Probar en celular y en distintos navegadores

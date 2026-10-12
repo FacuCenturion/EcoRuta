@@ -10,6 +10,10 @@ export default function Leyenda({ conCamion = false }: { conCamion?: boolean }) 
           {ETIQUETA_NIVEL[nivel]}
         </li>
       ))}
+      <li>
+        <span className="leyenda__punto leyenda__punto--estimado" />
+        Nivel estimado
+      </li>
       {conCamion && (
         <li>
           <span className="leyenda__cuadrado" />

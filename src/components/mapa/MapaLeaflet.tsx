@@ -13,7 +13,7 @@ import {
 } from 'react-leaflet';
 import { diaDeSemana } from '../../logic/llenado';
 import { motivoDelContenedor, nivelVisual } from '../../logic/prioridad';
-import { BORDE_ZONA, COLOR_NIVEL, OPACIDAD_ZONA } from '../../utils/colores';
+import { BORDE_ESTIMADO, BORDE_ZONA, COLOR_NIVEL, OPACIDAD_ZONA } from '../../utils/colores';
 import InfoContenedor from './InfoContenedor';
 import type { PropsMapa, Vista } from './tipos';
 
@@ -92,16 +92,18 @@ export default function MapaLeaflet({
         const nivel = nivelVisual(contenedor, hora, dia);
         const motivo = motivoDelContenedor(contenedor, hora, dia);
         const elegido = contenedor.id === seleccionadoId;
+        const estimado = contenedor.nivelEstimado !== undefined;
         return (
           <CircleMarker
             key={contenedor.id}
             center={[contenedor.posicion.lat, contenedor.posicion.lng]}
             radius={elegido ? 11 : nivel === 'bajo' ? 5 : 7}
             pathOptions={{
-              color: elegido ? '#2f6fd6' : nivel === 'desborde' ? '#d9a82b' : '#ffffff',
-              weight: elegido ? 3 : 1.5,
+              color: elegido ? '#2f6fd6' : estimado ? BORDE_ESTIMADO : nivel === 'desborde' ? '#d9a82b' : '#ffffff',
+              weight: elegido ? 3 : estimado ? 2 : 1.5,
+              dashArray: estimado && !elegido ? '3 3' : undefined,
               fillColor: COLOR_NIVEL[nivel],
-              fillOpacity: 0.95,
+              fillOpacity: estimado ? 0.6 : 0.95,
             }}
           >
             <Popup>
