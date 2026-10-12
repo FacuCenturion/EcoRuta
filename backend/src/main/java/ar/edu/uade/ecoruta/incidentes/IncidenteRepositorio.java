@@ -18,10 +18,16 @@ public interface IncidenteRepositorio extends JpaRepository<Incidente, Long> {
             WHERE (:zonaId IS NULL OR c.zonaId = :zonaId OR k.zonaId = :zonaId)
               AND (:tipo IS NULL OR i.tipo = :tipo)
               AND (:estado IS NULL OR i.estado = :estado)
-            ORDER BY i.creadoAt DESC
+            ORDER BY i.creadoAt DESC, i.id DESC
             """)
     List<Incidente> buscar(@Param("zonaId") Integer zonaId, @Param("tipo") String tipo,
             @Param("estado") String estado);
+
+    @Query("""
+            SELECT i FROM Incidente i LEFT JOIN FETCH i.contenedor
+            WHERE i.estado IN ('pendiente', 'confirmado')
+            """)
+    List<Incidente> abiertos();
 
     @Query("""
             SELECT i.contenedor.id, COUNT(i) FROM Incidente i

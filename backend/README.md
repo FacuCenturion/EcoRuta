@@ -42,29 +42,61 @@ Al arrancar, Flyway crea las tablas y carga los datos de ejemplo. La API queda e
 | Operador | `operador` | `operador123` |
 | Chofer (uno por camión) | `chofer22`, `chofer31`, `chofer14`, `chofer17`, `chofer5`, `chofer26`, `chofer12` | `chofer123` |
 
-### Endpoints que ya funcionan
+### Qué hace hoy
 
-| Método | Ruta | Quién | Qué devuelve |
-| --- | --- | --- | --- |
-| POST | `/api/v1/auth/login` | Público | Token y datos del usuario |
-| GET | `/api/v1/auth/me` | Cualquier usuario con token | El usuario del token |
-| GET | `/api/v1/zonas` | Director, Operador | Las 7 zonas con empresa, comunas, color, centro y base |
-| GET | `/api/v1/contenedores` | Director, Operador | Contenedores con su llenado. Filtro: `zonaId` |
-| GET | `/api/v1/contenedores/{id}` | Director, Operador | Un contenedor |
-| GET | `/api/v1/camiones` | Director, Operador | Camiones con chofer, estado y posición. Filtro: `zonaId` |
-| GET | `/api/v1/incidentes` | Director, Operador | Incidentes. Filtros: `zonaId`, `tipo`, `estado` |
+Como todavía no hay sensores en vivo, el backend trae un **emulador**: cada 4 segundos reales pasan 5 minutos simulados, los contenedores se llenan, los sensores mandan su nivel y los camiones recorren sus rutas. Con esos datos el sistema hace lo mismo que haría con datos reales:
+
+- guarda cada lectura y calcula qué contenedores son prioritarios (más del 80%, riesgo de desborde en las próximas 3 horas o reporte vecinal);
+- detecta lecturas irregulares y sensores sin señal o congelados, y les estima el nivel;
+- despacha un camión cuando una zona tiene 3 o más contenedores prioritarios o uno desbordado;
+- abre incidentes y los cierra solos cuando se resuelven.
+
+El emulador solo sabe lo que sabría el mundo real (cuánto se llenó cada contenedor, qué sensor se rompió). Al sistema le llega únicamente lo que mandaría un sensor: contenedor, nivel y hora. El día que haya sensores reales se apaga con `EMULADOR_ACTIVO=false` y las lecturas entran por `POST /api/v1/lecturas`.
+
+La primera vez que arranca, carga 24 horas de lecturas para que las curvas no empiecen vacías, y la hora del sistema arranca a las 17:00, justo antes del pico. La hora simulada se guarda: al reiniciar el servidor, sigue donde estaba.
+
+**Para empezar la demo de cero** hay que recrear la base:
+
+```bash
+dropdb -U ecoruta ecoruta && createdb ecoruta --owner ecoruta   # sin Docker
+docker compose down -v && docker compose up -d                  # con Docker
+```
+
+### Endpoints
+
+Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de director u operador.
+
+| Método | Ruta | Qué hace |
+| --- | --- | --- |
+| POST | `/auth/login` | Público. Devuelve el token y los datos del usuario |
+| GET | `/auth/me` | El usuario del token (cualquier rol) |
+| GET | `/zonas` | Las 7 zonas con empresa, comunas, color, centro y base |
+| GET | `/contenedores` | Contenedores con llenado, nivel, motivo de prioridad y estado del sensor. Filtro: `zonaId` |
+| GET | `/contenedores/prioritarios` | Los que hay que ir a buscar, del más lleno al menos lleno. Filtro: `zonaId` |
+| GET | `/contenedores/{id}` | Un contenedor |
+| GET | `/contenedores/{id}/lecturas` | Lecturas del sensor para dibujar la curva. Parámetro: `horas` (24 por defecto) |
+| POST | `/lecturas` | Entrada de los sensores reales. Usa el header `X-Api-Key` en vez de token |
+| GET | `/camiones` | Camiones con chofer, estado, posición y las paradas de su ruta. Filtro: `zonaId` |
+| GET | `/rutas` | Rutas del día. Filtros: `zonaId`, `estado` |
+| GET | `/rutas/{id}` | Una ruta con sus paradas |
+| POST | `/rutas/planificar` | Despacho manual: manda ahora el camión de una zona. Body: `zonaId` |
+| GET | `/incidentes` | Incidentes. Filtros: `zonaId`, `tipo`, `estado` |
+| POST | `/incidentes/{id}/decision` | El operador confirma o descarta. Body: `decision` |
+| GET | `/reportes-vecinales` | Los incidentes que vienen de vecinos. Filtros: `zonaId`, `estado` |
+| POST | `/reportes-vecinales` | Carga un reporte. Body: `contenedorId`, `comentario` |
+| GET | `/panel/resumen` | Los números del día: recolectados, km evitados, prioritarios, sensores por estado. Filtro: `zonaId` |
+| GET | `/simulacion` | Hora del sistema y si la simulación está en pausa |
+| POST | `/simulacion` | Pausar o acelerar la demo. Body: `enPausa`, `velocidad` (1 a 20) |
 
 Para probarlos desde Swagger: llamar a `/auth/login`, copiar el `token` de la respuesta y pegarlo con el botón **Authorize**. Desde la terminal:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/auth/login \
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
   -H 'Content-Type: application/json' \
-  -d '{"usuario":"director","contrasena":"director123"}'
+  -d '{"usuario":"operador","contrasena":"operador123"}' | sed 's/.*"token":"\([^"]*\)".*/\1/')
 
-curl http://localhost:8080/api/v1/zonas -H "Authorization: Bearer <token>"
+curl http://localhost:8080/api/v1/panel/resumen -H "Authorization: Bearer $TOKEN"
 ```
-
-Los datos todavía son los de ejemplo, quietos: el llenado empieza a moverse cuando exista el emulador de sensores.
 
 ### Variables de entorno
 
@@ -76,6 +108,7 @@ Todas tienen un valor por defecto para desarrollo, en `src/main/resources/applic
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | Conexión a PostgreSQL | `jdbc:postgresql://localhost:5432/ecoruta`, `ecoruta`, `ecoruta` |
 | `CORS_ORIGENES` | Desde dónde puede llamar el front | `http://localhost:5173` |
 | `SENSORES_API_KEY` | Clave del header `X-Api-Key` del emulador | `clave-de-desarrollo` |
+| `EMULADOR_ACTIVO` | Prende el emulador de sensores y choferes | `true` |
 | `JWT_SECRETO` | Clave con la que se firman los tokens (32 caracteres o más) | Una de desarrollo; cambiarla al publicar la demo |
 
 ## Pruebas
@@ -92,11 +125,16 @@ Las pruebas que levantan la aplicación completa usan Testcontainers: crean un P
 src/main/java/ar/edu/uade/ecoruta/
   comun/        errores, seguridad y Swagger, compartidos por todos los módulos
   auth/         login, token y usuarios
-  zonas/  contenedores/  camiones/  incidentes/
+  zonas/  camiones/  incidentes/
                 un paquete por módulo, cada uno con su entidad, repositorio, DTO y controlador
-  (próximos)    lecturas de sensores, rutas, indicadores
+  contenedores/ además tiene el modelo de llenado y la regla de prioridad
+  sensores/     entrada de lecturas, detección de anomalías y estado de cada sensor
+  rutas/        despacho a demanda, orden de paradas y avance de la ruta
+  panel/        números del día para el Panel general
+  emulador/     hace de sensores y choferes mientras no haya datos en vivo
+  (próximos)    tráfico, aviso al chofer, indicadores
 src/main/resources/
-  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales)
+  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj)
 scripts/        generan V2 y V3 a partir de los datos del front
 ```
 
@@ -104,5 +142,7 @@ scripts/        generan V2 y V3 a partir de los datos del front
 
 - **Nunca se edita una migración que ya está en `develop`.** Para cambiar una tabla se agrega una nueva: `V3__agregar_columna_x.sql`. Flyway compara cada archivo con lo que ya corrió y falla si alguno cambió.
 - Si dos personas crean la misma versión (dos `V3`), la segunda en hacer merge renombra la suya a `V4`.
+- La lógica de prioridad, llenado, anomalías, sensores y rutas es la misma que la de `src/logic/` del front. Si se cambia una regla, hay que cambiarla en los dos lados hasta que el panel lea todo de la API. Los umbrales están en `comun/Parametros.java`.
+- Para saber qué hora es, el código usa siempre `RelojDelSistema.ahora()`, nunca la hora de la máquina: así funciona igual con la hora simulada y con la real.
 - Los DTO usan los mismos nombres de campo que `src/types/index.ts` del front, para que el panel pueda tipar las respuestas con lo que ya tiene.
 - Los errores se responden con `{ "codigo", "mensaje" }`. Para un 404 se lanza `RecursoNoEncontradoException` y para un 409, `EstadoInvalidoException`. Lo demás lo resuelve `ManejadorDeErrores`.

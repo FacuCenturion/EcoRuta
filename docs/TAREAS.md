@@ -12,7 +12,7 @@ El panel web del gerente está completo y funciona con datos simulados. El backe
 | Pantalla de estado de sensores y detección de fallas | Hecho, en `main` |
 | Backend: proyecto, base de datos y datos de ejemplo | Hecho, en `main` |
 | Backend: login y endpoints para leer zonas, contenedores, camiones e incidentes | Hecho |
-| Backend: lecturas de sensores, prioridad, rutas e incidentes en el servidor | Sin empezar (Sprint 3) |
+| Backend: lecturas de sensores, prioridad, rutas a demanda e incidentes, con datos simulados por un emulador | Hecho |
 | Panel conectado al backend | Sin empezar (Sprint 3) |
 | Despacho a demanda con tráfico y aviso al chofer | Sin empezar (Sprint 4) |
 | App del chofer | Sin empezar (Sprint 4, versión mínima) |
@@ -89,15 +89,16 @@ Plan por sprint:
 - [x] Elegir tecnología: Spring Boot con PostgreSQL, en la carpeta `backend/`
 - [x] Esqueleto del backend: migraciones con las 10 tablas, datos de ejemplo, Swagger y formato de error
 - [x] Migración `V3` con las zonas oficiales: empresas, comunas, color y ubicaciones nuevas de contenedores y camiones
-- [ ] Sumar al modelo el estado del sensor y el nivel estimado (cuando entre `feature/estado-sensores`)
+- [x] Sumar al modelo el estado del sensor y el nivel estimado
 
 Sprint 3, un bloque por integrante:
 
 - [x] Bloque 1, login y datos (backend): login con JWT y roles; endpoints para leer zonas, contenedores, camiones e incidentes
 - [ ] Bloque 1, login y datos (front): el login del panel pasa a la API y se borran las contraseñas de `src/data/usuarios.ts`
-- [ ] Bloque 2, sensores y prioridad: recibir lecturas, detectar anomalías y fallas de sensor, calcular la prioridad en el servidor
-- [ ] Bloque 3, rutas a demanda: despacho automático y manual, con el orden de paradas por vecino más cercano
-- [ ] Bloque 4, incidentes y emulador: confirmar y descartar incidentes, reportes vecinales; el simulador pasa a mandar datos a la API; conectar `SimulacionContext` con la API
+- [x] Bloque 2, sensores y prioridad: recibir lecturas, detectar anomalías y fallas de sensor, calcular la prioridad en el servidor
+- [x] Bloque 3, rutas a demanda: despacho automático y manual, con el orden de paradas por vecino más cercano
+- [x] Bloque 4, incidentes y emulador (backend): confirmar y descartar incidentes, reportes vecinales, cierre automático; emulador de sensores y choferes dentro del backend
+- [ ] Bloque 4 (front): conectar `SimulacionContext` con la API, para que el panel deje de simular
 
 Sprint 4:
 

@@ -65,8 +65,10 @@ public class ConfiguracionSeguridad {
                         .requestMatchers(RUTAS_PUBLICAS).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                         .requestMatchers("/api/v1/auth/me").authenticated()
-                        // Todo lo demás es del panel. Los endpoints del chofer y de los
-                        // sensores se agregan arriba de esta línea cuando existan.
+                        // Los sensores no tienen usuario: el controlador valida el header X-Api-Key
+                        .requestMatchers(HttpMethod.POST, "/api/v1/lecturas").permitAll()
+                        // Todo lo demás es del panel. Los endpoints del chofer se agregan
+                        // arriba de esta línea cuando existan.
                         .requestMatchers("/api/v1/**").hasAnyRole("DIRECTOR", "OPERADOR")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth

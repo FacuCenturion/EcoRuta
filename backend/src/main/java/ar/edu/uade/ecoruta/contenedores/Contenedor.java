@@ -1,6 +1,7 @@
 package ar.edu.uade.ecoruta.contenedores;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 
 import jakarta.persistence.Column;
@@ -10,6 +11,9 @@ import jakarta.persistence.Table;
 
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+
+import ar.edu.uade.ecoruta.comun.Coordenada;
+import ar.edu.uade.ecoruta.comun.Fechas;
 
 @Entity
 @Table(name = "contenedor")
@@ -32,10 +36,51 @@ public class Contenedor {
 
     @Column(name = "ultima_lectura_at")
     private OffsetDateTime ultimaLecturaAt;
-    private boolean anomalia;
+    private boolean anomalia; // las últimas lecturas suben y bajan de golpe
     private boolean activo;
 
+    @Column(name = "estado_sensor")
+    private String estadoSensor; // funcionando, irregular, congelado o sin_senal
+
+    @JdbcTypeCode(SqlTypes.SMALLINT)
+    @Column(name = "nivel_estimado")
+    private Integer nivelEstimado; // solo cuando no se puede confiar en el sensor
+
+    @Column(name = "ultima_recoleccion_at")
+    private OffsetDateTime ultimaRecoleccionAt;
+
     protected Contenedor() {
+    }
+
+    public void registrarLectura(int nivel, Instant medidoAt) {
+        // Una lectura que llega tarde queda en el historial pero no pisa a una más nueva
+        if (ultimaLecturaAt == null || !medidoAt.isBefore(ultimaLecturaAt.toInstant())) {
+            llenado = nivel;
+            ultimaLecturaAt = Fechas.paraLaBase(medidoAt);
+        }
+    }
+
+    public void marcarAnomalia(boolean irregular) {
+        anomalia = irregular;
+    }
+
+    public void actualizarSensor(String estado, Integer estimado) {
+        estadoSensor = estado;
+        nivelEstimado = estimado;
+    }
+
+    /** Un chofer confirmó que lo vació. */
+    public void registrarRecoleccion(Instant momento) {
+        ultimaRecoleccionAt = Fechas.paraLaBase(momento);
+        anomalia = false;
+    }
+
+    public Coordenada posicion() {
+        return new Coordenada(lat, lng);
+    }
+
+    public double velocidad() {
+        return velocidadLlenado.doubleValue();
     }
 
     public String getId() {
@@ -48,18 +93,6 @@ public class Contenedor {
 
     public int getZonaId() {
         return zonaId;
-    }
-
-    public double getLat() {
-        return lat;
-    }
-
-    public double getLng() {
-        return lng;
-    }
-
-    public BigDecimal getVelocidadLlenado() {
-        return velocidadLlenado;
     }
 
     public int getLlenado() {
@@ -76,5 +109,17 @@ public class Contenedor {
 
     public boolean isActivo() {
         return activo;
+    }
+
+    public String getEstadoSensor() {
+        return estadoSensor;
+    }
+
+    public Integer getNivelEstimado() {
+        return nivelEstimado;
+    }
+
+    public OffsetDateTime getUltimaRecoleccionAt() {
+        return ultimaRecoleccionAt;
     }
 }
