@@ -28,8 +28,8 @@ Plan por sprint:
 | --- | --- | --- |
 | 1 | Panel web con datos simulados | Terminada |
 | 2 | Base del backend, zonas oficiales en el mapa y estado de sensores | Se presenta el 13/10 |
-| 3 | El panel funciona con la API y la base de datos (parte central) | Próxima |
-| 4 | Tráfico con Google, aviso al chofer y app del chofer mínima | Pendiente |
+| 3 | El panel funciona con la API y la base de datos (parte central); contenedores ubicados sobre la calle | Próxima |
+| 4 | Rutas que siguen las calles y tráfico con Google, aviso al chofer y app del chofer mínima | Pendiente |
 | 5 | Indicadores desde la base, demo publicada y cierre | Pendiente |
 
 ## Fase 1: Base del proyecto
@@ -105,8 +105,11 @@ Sprint 3, un bloque por integrante:
 - [x] Bloque 4, incidentes y emulador (backend): confirmar y descartar incidentes, reportes vecinales, cierre automático; emulador de sensores y choferes dentro del backend
 - [ ] Bloque 4 (front): conectar `SimulacionContext` con la API, para que el panel deje de simular
 
+- [ ] Contenedores sobre la calle: reemplazar las posiciones de ejemplo por las del dataset de contenedores de la Ciudad (migración nueva)
+
 Sprint 4:
 
+- [ ] Rutas por las calles: pedir el recorrido a la Routes API de Google, guardarlo en la ruta y dibujarlo en el panel en lugar de las líneas rectas
 - [ ] Elegir la hora de salida con menos tráfico (Google Routes API, con una tabla simulada si no hay clave)
 - [ ] Notificación push al chofer cuando se le asigna una ruta (Firebase)
 - [ ] Endpoints de la app del chofer: registrar el celular, ver la ruta e iniciarla
