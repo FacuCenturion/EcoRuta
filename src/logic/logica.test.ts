@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { crearContenedores } from '../data/semilla';
 import { ZONAS, zonaDeUbicacion } from '../data/zonas';
 import { avanzar, crearEstadoInicial, decidirIncidente } from '../simulator/simulador';
+import type { Contenedor } from '../types';
 import { detectarAnomalia } from './anomalias';
+import { actualizarSensor, estadoDelSensor, nivelEstimado, resumenSensores } from './estadoSensor';
 import { generarHistorial } from './historial';
 import { clasificarNivel, motivoDePrioridad } from './prioridad';
 import { distanciaKm, planificarRuta } from './rutas';
@@ -101,6 +103,95 @@ describe('simulador', () => {
     const descartado = decidirIncidente(confirmado, segundo.id, 'descartado');
     expect(descartado.incidentes.find((i) => i.id === primero.id)?.estado).toBe('confirmado');
     expect(descartado.incidentes.find((i) => i.id === segundo.id)?.estado).toBe('descartado');
+  });
+});
+
+describe('estado de los sensores', () => {
+  const AHORA = new Date(2026, 9, 13, 12, 0).getTime();
+  const MINUTO = 60 * 1000;
+
+  // Contenedor de prueba con una lectura cada 5 minutos que termina en "hasta"
+  function contenedorCon(niveles: number[], hasta = AHORA): Contenedor {
+    const [base] = crearContenedores(2026);
+    const historial = niveles.map((nivel, i) => ({ ms: hasta - (niveles.length - 1 - i) * 5 * MINUTO, nivel }));
+    return {
+      ...base,
+      historial,
+      lecturas: niveles.slice(-8),
+      llenado: niveles[niveles.length - 1],
+      ultimaLecturaMs: hasta,
+      anomalia: false,
+      ultimaRecoleccionMs: 0,
+    };
+  }
+
+  // 6 horas de lecturas que van subiendo de a poco
+  const subiendo = Array.from({ length: 73 }, (_, i) => 20 + Math.floor(i / 3));
+
+  it('un sensor que mide normal está funcionando', () => {
+    expect(estadoDelSensor(contenedorCon(subiendo), AHORA)).toBe('funcionando');
+  });
+
+  it('si no manda datos hace más de 2 horas no tiene señal', () => {
+    const contenedor = contenedorCon(subiendo, AHORA - 3 * 60 * MINUTO);
+    expect(estadoDelSensor(contenedor, AHORA)).toBe('sin_senal');
+  });
+
+  it('si marca lo mismo durante 4 horas quedó congelado', () => {
+    const congelado = [...subiendo.slice(0, 20), ...Array(53).fill(40)];
+    expect(estadoDelSensor(contenedorCon(congelado), AHORA)).toBe('congelado');
+  });
+
+  it('un contenedor lleno que siempre marca 100 no es una falla', () => {
+    expect(estadoDelSensor(contenedorCon(Array(73).fill(100)), AHORA)).toBe('funcionando');
+  });
+
+  it('sin datos de toda la ventana no se lo da por congelado', () => {
+    expect(estadoDelSensor(contenedorCon(Array(10).fill(40)), AHORA)).toBe('funcionando');
+  });
+
+  it('las lecturas irregulares no cuentan como sensor caído', () => {
+    const contenedor = { ...contenedorCon(subiendo), anomalia: true };
+    expect(estadoDelSensor(contenedor, AHORA)).toBe('irregular');
+  });
+
+  it('sin señal, el nivel se estima desde la última lectura', () => {
+    const contenedor = contenedorCon(subiendo, AHORA - 5 * 60 * MINUTO);
+    actualizarSensor(contenedor, AHORA);
+    expect(contenedor.nivelEstimado).toBeGreaterThan(contenedor.llenado);
+    expect(contenedor.nivelEstimado).toBeLessThanOrEqual(100);
+  });
+
+  it('si un chofer lo vació después de la última lectura, se estima desde la recolección', () => {
+    const contenedor = contenedorCon(Array(73).fill(85), AHORA - 5 * 60 * MINUTO);
+    contenedor.ultimaRecoleccionMs = AHORA - 60 * MINUTO;
+    actualizarSensor(contenedor, AHORA);
+    expect(nivelEstimado(contenedor, AHORA)).toBeLessThan(20);
+  });
+
+  it('con el sensor funcionando no se estima nada', () => {
+    const contenedor = contenedorCon(subiendo);
+    actualizarSensor(contenedor, AHORA);
+    expect(contenedor.nivelEstimado).toBeUndefined();
+  });
+
+  it('el simulador arranca con sensores fallados y el sistema los detecta', () => {
+    const estado = crearEstadoInicial();
+    const fallados = estado.contenedores.filter((c) => c.fallaSimulada !== 'ninguna');
+    expect(fallados.length).toBeGreaterThan(0);
+    fallados.forEach((c) => {
+      expect(['sin_senal', 'congelado']).toContain(c.estadoSensor);
+      expect(c.nivelEstimado).toBeDefined();
+    });
+    const resumen = resumenSensores(estado.contenedores);
+    expect(resumen.porcentajeOperativo).toBeGreaterThan(80);
+    expect(resumen.porcentajeOperativo).toBeLessThan(100);
+  });
+
+  it('cada sensor arranca con un día de lecturas para la curva', () => {
+    const estado = crearEstadoInicial();
+    const sano = estado.contenedores.find((c) => c.fallaSimulada === 'ninguna');
+    expect(sano?.historial.length).toBe(24 * 12);
   });
 });
 

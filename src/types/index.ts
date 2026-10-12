@@ -17,6 +17,19 @@ export interface Zona {
 
 export type NivelLlenado = 'bajo' | 'medio' | 'prioritario' | 'desborde';
 
+// Lo único que mandan los sensores: el nivel de llenado y cuándo se midió
+export interface LecturaSensor {
+  ms: number;
+  nivel: number;
+}
+
+// Estado del sensor deducido de sus lecturas (no sabemos nada de la batería)
+export type EstadoSensor = 'funcionando' | 'irregular' | 'congelado' | 'sin_senal';
+
+// Falla que el simulador le pone a un sensor. El sistema no la conoce:
+// la tiene que descubrir mirando las lecturas.
+export type FallaSimulada = 'ninguna' | 'sin_senal' | 'congelado';
+
 export interface Contenedor {
   id: string;
   direccion: string;
@@ -30,6 +43,11 @@ export interface Contenedor {
   irregularHasta: number; // tick hasta el que se simula una persona revolviendo
   anomalia: boolean; // el sistema detectó lecturas irregulares
   reportesVecinales: number; // reportes abiertos hechos por vecinos
+  historial: LecturaSensor[]; // lecturas de las últimas 24 h, para la curva
+  fallaSimulada: FallaSimulada;
+  estadoSensor: EstadoSensor;
+  nivelEstimado?: number; // se calcula cuando no se puede confiar en el sensor
+  ultimaRecoleccionMs: number; // última vez que un chofer confirmó que lo vació (0 si no hay dato)
 }
 
 export type EstadoCamion = 'en_ruta' | 'en_descarga' | 'en_base' | 'demorado';

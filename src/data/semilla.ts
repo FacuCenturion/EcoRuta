@@ -53,6 +53,10 @@ export function crearContenedores(semilla: number): Contenedor[] {
         irregularHasta: 0,
         anomalia: false,
         reportesVecinales: 0,
+        historial: [],
+        fallaSimulada: 'ninguna',
+        estadoSensor: 'funcionando',
+        ultimaRecoleccionMs: 0,
       });
     }
   }

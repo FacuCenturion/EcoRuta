@@ -30,6 +30,15 @@ export const PROBABILIDAD_NO_SE_PUDO = 0.08;
 export const SALTO_MINIMO_ANOMALIA = 4; // variación (en %) para considerarla un salto
 export const LECTURAS_PARA_ANOMALIA = 6;
 
+// Estado de los sensores. Como los sensores solo informan el nivel de llenado,
+// las fallas se deducen de las lecturas.
+export const HORAS_SIN_SENAL = 2; // sin lecturas en este tiempo, el sensor se considera caído
+export const HORAS_VALOR_CONGELADO = 4; // misma lectura durante este tiempo
+export const NIVEL_LLENO = 98; // un contenedor lleno marca siempre lo mismo y eso no es una falla
+export const NIVEL_TRAS_RECOLECCION = 4; // nivel que se asume apenas el chofer vacía el contenedor
+export const HORAS_DE_HISTORIAL = 24;
+export const PROBABILIDAD_FALLA_SENSOR = 0.01; // por actualización, en algún sensor de la ciudad
+
 // Indicadores ambientales (valor estimado, se puede ajustar)
 export const KG_CO2_POR_KM = 1.3;
 
