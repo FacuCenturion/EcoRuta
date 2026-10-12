@@ -41,7 +41,7 @@ export default function MapaEnVivo() {
 
   return (
     <>
-      <Encabezado titulo="Mapa en vivo" subtitulo="Estado de cada contenedor según su último dato de sensor." />
+      <Encabezado titulo="Mapa en vivo" subtitulo="Estado de cada contenedor según su último dato de sensor. Si el sensor falla, se muestra el nivel estimado." />
       <div className="mapa-pagina">
         <section className="panel panel--mapa-grande" aria-label="Mapa">
           <div className="barra-filtros">
@@ -96,6 +96,7 @@ export default function MapaEnVivo() {
                       <strong>{contenedor.direccion}</strong>
                       <small>
                         Zona {contenedor.zonaId} · {etiquetaMotivo(motivo)}
+                        {contenedor.nivelEstimado !== undefined && ' · nivel estimado'}
                       </small>
                     </span>
                     <span className="fila-boton__valor">{Math.round(lecturaConfiable(contenedor))}%</span>

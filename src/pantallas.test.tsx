@@ -43,7 +43,7 @@ describe('pantallas con sesión de director', () => {
     sessionStorage.setItem('ecoruta.sesion', 'director');
   });
 
-  for (const ruta of ['/', '/mapa', '/rutas', '/incidentes', '/reportes', '/indicadores']) {
+  for (const ruta of ['/', '/mapa', '/sensores', '/rutas', '/incidentes', '/reportes', '/indicadores']) {
     it(`se muestra la pantalla ${ruta}`, async () => {
       const div = await mostrar(ruta);
       expect(div.querySelector('h1')?.textContent?.length).toBeGreaterThan(3);
@@ -70,6 +70,13 @@ describe('login y roles', () => {
     expect(div.textContent).toContain('Indicadores');
   });
 
+  it('el operador también ve el estado de los sensores', async () => {
+    sessionStorage.setItem('ecoruta.sesion', 'operador');
+    const div = await mostrar('/sensores');
+    expect(div.querySelector('h1')?.textContent).toBe('Estado de sensores');
+    expect(div.textContent).toContain('Sin señal');
+  });
+
   it('valida usuario y contraseña', () => {
     expect(validarCredenciales('director', 'director123')?.rol).toBe('director');
     expect(validarCredenciales(' Operador ', 'operador123')?.rol).toBe('operador');
@@ -85,5 +92,6 @@ describe('login y roles', () => {
     expect(puedeVer('director', '/indicadores')).toBe(true);
     expect(puedeVer('operador', '/indicadores')).toBe(false);
     expect(puedeVer('operador', '/incidentes')).toBe(true);
+    expect(puedeVer('operador', '/sensores')).toBe(true);
   });
 });

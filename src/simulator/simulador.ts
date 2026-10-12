@@ -4,11 +4,13 @@
 // anomalías y los camiones van recolectando sus rutas.
 import {
   CARGA_POR_PARADA,
+  HORAS_DE_HISTORIAL,
   HORA_INICIAL,
   MAX_PARADAS_POR_RUTA,
   MINUTOS_POR_PARADA,
   MINUTOS_POR_TICK,
   MIN_PARADAS_PARA_SALIR,
+  PROBABILIDAD_FALLA_SENSOR,
   PROBABILIDAD_NO_SE_PUDO,
   TICKS_DE_DESCARGA,
   UMBRAL_DESBORDE,
@@ -17,15 +19,30 @@ import {
 import { crearCamiones, crearContenedores } from '../data/semilla';
 import { buscarZona } from '../data/zonas';
 import { detectarAnomalia } from '../logic/anomalias';
+import { actualizarSensor } from '../logic/estadoSensor';
 import { diaDeSemana, incrementoPorHora } from '../logic/llenado';
 import { lecturaConfiable, motivoDelContenedor } from '../logic/prioridad';
 import { kmRutaFija } from '../logic/indicadores';
 import { distanciaKm, planificarRuta } from '../logic/rutas';
-import type { Camion, Contenedor, EstadoIncidente, EstadoSimulacion, Incidente } from '../types';
+import type {
+  Camion,
+  Contenedor,
+  EstadoIncidente,
+  EstadoSimulacion,
+  FallaSimulada,
+  Incidente,
+  LecturaSensor,
+} from '../types';
 import { crearAleatorio, elegir, entre } from '../utils/aleatorio';
 
 const SEMILLA_POR_DEFECTO = 2026;
 const MS_POR_MINUTO = 60000;
+const MS_POR_TICK_SIMULADO = MINUTOS_POR_TICK * MS_POR_MINUTO;
+
+// Sensores que ya arrancan con fallas, como pasaría al reactivar sensores
+// que estuvieron mucho tiempo sin uso ni mantenimiento.
+const SENSORES_SIN_SENAL_AL_INICIO = 6;
+const SENSORES_CONGELADOS_AL_INICIO = 3;
 
 const MOTIVOS_NO_SE_PUDO = [
   'Auto estacionado',
@@ -55,6 +72,74 @@ function buscarContenedor(estado: EstadoSimulacion, id: string): Contenedor {
   const contenedor = estado.contenedores.find((c) => c.id === id);
   if (!contenedor) throw new Error(`No existe el contenedor ${id}`);
   return contenedor;
+}
+
+// ---------- Sensores ----------
+
+// Guarda una lectura nueva y descarta las de más de 24 h
+function registrarLectura(estado: EstadoSimulacion, contenedor: Contenedor, nivel: number) {
+  const desde = estado.relojMs - HORAS_DE_HISTORIAL * 60 * MS_POR_MINUTO;
+  contenedor.llenado = nivel;
+  contenedor.lecturas = [...contenedor.lecturas.slice(-7), nivel];
+  contenedor.ultimaLecturaMs = estado.relojMs;
+  contenedor.historial = [
+    ...contenedor.historial.filter((l) => l.ms > desde && l.ms !== estado.relojMs),
+    { ms: estado.relojMs, nivel },
+  ];
+}
+
+// Arma hacia atrás las lecturas de las últimas 24 h a partir del nivel actual,
+// así la curva de cada sensor no arranca vacía. Si el nivel llega a cero es
+// porque ahí pasó el camión: antes de eso el contenedor estaba lleno.
+function completarHistorial(contenedor: Contenedor, relojMs: number, azar: () => number) {
+  const historial: LecturaSensor[] = [];
+  const pasos = (HORAS_DE_HISTORIAL * 60) / MINUTOS_POR_TICK;
+  let nivel = contenedor.nivelReal;
+
+  for (let i = 0; i < pasos; i++) {
+    const ms = relojMs - i * MS_POR_TICK_SIMULADO;
+    historial.push({ ms, nivel: Math.round(nivel) });
+    const fecha = new Date(ms);
+    nivel -=
+      incrementoPorHora(contenedor.velocidad, fecha.getHours(), diaDeSemana(fecha)) *
+      (MINUTOS_POR_TICK / 60) *
+      entre(azar, 0.7, 1.3);
+    if (nivel < 2) {
+      if (contenedor.ultimaRecoleccionMs === 0) contenedor.ultimaRecoleccionMs = ms;
+      nivel = entre(azar, 65, 92);
+    }
+  }
+
+  contenedor.historial = historial.reverse();
+  contenedor.lecturas = contenedor.historial.slice(-8).map((l) => l.nivel);
+  contenedor.ultimaLecturaMs = relojMs;
+}
+
+// Algunos sensores dejan de mandar datos y otros quedan trabados en un valor
+function simularFallasIniciales(estado: EstadoSimulacion, azar: () => number) {
+  const reservados = new Set(['Z2-04', 'Z3-07', 'Z2-11']); // los usa el arranque de la demo
+  const candidatos = estado.contenedores.filter((c) => !reservados.has(c.id));
+  const cantidad = SENSORES_SIN_SENAL_AL_INICIO + SENSORES_CONGELADOS_AL_INICIO;
+
+  for (let i = 0; i < cantidad; i++) {
+    const [contenedor] = candidatos.splice(Math.floor(azar() * candidatos.length), 1);
+    const corteMs = estado.relojMs - entre(azar, 3, 20) * 60 * MS_POR_MINUTO;
+    const anteriores = contenedor.historial.filter((l) => l.ms <= corteMs);
+
+    if (i < SENSORES_SIN_SENAL_AL_INICIO) {
+      contenedor.fallaSimulada = 'sin_senal';
+      contenedor.historial = anteriores;
+    } else {
+      contenedor.fallaSimulada = 'congelado';
+      const valor = anteriores[anteriores.length - 1].nivel;
+      contenedor.historial = contenedor.historial.map((l) => (l.ms > corteMs ? { ...l, nivel: valor } : l));
+    }
+
+    const ultima = contenedor.historial[contenedor.historial.length - 1];
+    contenedor.llenado = ultima.nivel;
+    contenedor.ultimaLecturaMs = ultima.ms;
+    contenedor.lecturas = contenedor.historial.slice(-8).map((l) => l.nivel);
+  }
 }
 
 // ---------- Incidentes ----------
@@ -127,12 +212,13 @@ function planificarCamion(estado: EstadoSimulacion, camion: Camion) {
 function recolectar(estado: EstadoSimulacion, contenedor: Contenedor, azar: () => number) {
   const nivel = Math.round(entre(azar, 2, 6));
   contenedor.nivelReal = nivel;
-  contenedor.llenado = nivel;
-  contenedor.lecturas = [...contenedor.lecturas.slice(-7), nivel];
-  contenedor.ultimaLecturaMs = estado.relojMs;
+  contenedor.ultimaRecoleccionMs = estado.relojMs; // lo confirma el chofer
+  // Un sensor caído o trabado no se entera de que lo vaciaron
+  if (contenedor.fallaSimulada === 'ninguna') registrarLectura(estado, contenedor, nivel);
   contenedor.anomalia = false;
   contenedor.irregularHasta = 0;
   contenedor.reportesVecinales = 0;
+  actualizarSensor(contenedor, estado.relojMs);
 }
 
 function avanzarCamion(estado: EstadoSimulacion, camion: Camion, azar: () => number) {
@@ -224,17 +310,22 @@ export function crearEstadoInicial(semilla: number = SEMILLA_POR_DEFECTO): Estad
     kmEvitadosHoy: 0,
     contadorIncidentes: 0,
   };
-  estado.contenedores.forEach((c) => {
-    c.ultimaLecturaMs = relojMs;
-  });
+  const sospechoso = buscarContenedor(estado, 'Z2-11');
+  sospechoso.nivelReal = 55;
+
+  const azar = crearAleatorio(semilla + 1000);
+  estado.contenedores.forEach((c) => completarHistorial(c, relojMs, azar));
+  simularFallasIniciales(estado, azar);
 
   // Dos reportes de vecinos y un sensor con lecturas raras, para que el panel
   // no arranque vacío.
   registrarReporteVecinal(estado, 'Z2-04', 'Hay bolsas tiradas al lado del contenedor.');
   registrarReporteVecinal(estado, 'Z3-07', 'El contenedor está lleno y huele mal.');
-  const sospechoso = buscarContenedor(estado, 'Z2-11');
-  sospechoso.nivelReal = 55;
   sospechoso.lecturas = [52, 61, 49, 62, 48, 60];
+  const inicioIrregular = sospechoso.historial.length - sospechoso.lecturas.length;
+  sospechoso.historial = sospechoso.historial.map((l, i) =>
+    i >= inicioIrregular ? { ...l, nivel: sospechoso.lecturas[i - inicioIrregular] } : l,
+  );
   sospechoso.llenado = 60;
   sospechoso.anomalia = true;
   sospechoso.irregularHasta = 6;
@@ -245,6 +336,7 @@ export function crearEstadoInicial(semilla: number = SEMILLA_POR_DEFECTO): Estad
     sugerencia: 'Atención social (108)',
   });
 
+  estado.contenedores.forEach((c) => actualizarSensor(c, relojMs));
   estado.camiones.forEach((camion) => planificarCamion(estado, camion));
   return estado;
 }
@@ -289,9 +381,13 @@ export function avanzar(anterior: EstadoSimulacion): EstadoSimulacion {
     if (contenedor.irregularHasta > estado.tick) {
       lectura += (estado.tick % 2 === 0 ? 1 : -1) * entre(azar, 6, 12);
     }
-    contenedor.llenado = Math.round(limitar(lectura, 0, 100));
-    contenedor.lecturas = [...contenedor.lecturas.slice(-7), contenedor.llenado];
-    contenedor.ultimaLecturaMs = estado.relojMs;
+    // Un sensor trabado repite su valor; uno sin señal no manda nada y el
+    // sistema se da cuenta por el tiempo que pasa sin datos.
+    if (contenedor.fallaSimulada === 'ninguna') {
+      registrarLectura(estado, contenedor, Math.round(limitar(lectura, 0, 100)));
+    } else if (contenedor.fallaSimulada === 'congelado') {
+      registrarLectura(estado, contenedor, contenedor.llenado);
+    }
 
     // 2) Detección de anomalías
     const irregular = detectarAnomalia(contenedor.lecturas);
@@ -306,6 +402,14 @@ export function avanzar(anterior: EstadoSimulacion): EstadoSimulacion {
     } else if (!irregular && contenedor.anomalia && contenedor.irregularHasta <= estado.tick) {
       contenedor.anomalia = false;
     }
+
+    actualizarSensor(contenedor, estado.relojMs);
+  }
+
+  // De vez en cuando un sensor deja de funcionar
+  const sanos = estado.contenedores.filter((c) => c.fallaSimulada === 'ninguna' && !c.anomalia);
+  if (azar() < PROBABILIDAD_FALLA_SENSOR && sanos.length > 0) {
+    elegir(azar, sanos).fallaSimulada = elegir<FallaSimulada>(azar, ['sin_senal', 'congelado']);
   }
 
   // 3) A veces entra un reporte de un vecino por Boti

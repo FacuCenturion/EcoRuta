@@ -11,9 +11,11 @@ export function clasificarNivel(llenado: number): NivelLlenado {
   return 'bajo';
 }
 
-// Si el sensor está dando lecturas irregulares no nos fiamos de la última:
-// usamos el promedio de las últimas tres.
+// Nivel con el que se decide. Si el sensor no manda datos o quedó trabado,
+// se usa el nivel estimado. Si da lecturas irregulares no nos fiamos de la
+// última: usamos el promedio de las últimas tres.
 export function lecturaConfiable(contenedor: Contenedor): number {
+  if (contenedor.nivelEstimado !== undefined) return contenedor.nivelEstimado;
   if (!contenedor.anomalia) return contenedor.llenado;
   const ultimas = contenedor.lecturas.slice(-3);
   return ultimas.reduce((suma, valor) => suma + valor, 0) / ultimas.length;

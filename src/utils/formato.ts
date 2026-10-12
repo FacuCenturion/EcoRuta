@@ -25,3 +25,14 @@ export function formatearFechaLarga(ms: number): string {
 export function formatearFechaCorta(ms: number): string {
   return new Date(ms).toLocaleDateString('es-AR', { day: 'numeric', month: 'numeric' });
 }
+
+// Tiempo transcurrido desde una lectura, en palabras: "hace 25 min", "hace 3 h"
+export function formatearHaceCuanto(ms: number, ahoraMs: number): string {
+  const minutos = Math.max(0, Math.round((ahoraMs - ms) / 60000));
+  if (minutos < 1) return 'recién';
+  if (minutos < 60) return `hace ${minutos} min`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `hace ${horas} h`;
+  const dias = Math.floor(horas / 24);
+  return dias === 1 ? 'hace 1 día' : `hace ${dias} días`;
+}

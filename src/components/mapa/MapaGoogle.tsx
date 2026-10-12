@@ -11,7 +11,7 @@ import {
 import { useEffect, useState } from 'react';
 import { diaDeSemana } from '../../logic/llenado';
 import { motivoDelContenedor, nivelVisual } from '../../logic/prioridad';
-import { BORDE_ZONA, COLOR_NIVEL, OPACIDAD_ZONA } from '../../utils/colores';
+import { BORDE_ESTIMADO, BORDE_ZONA, COLOR_NIVEL, OPACIDAD_ZONA } from '../../utils/colores';
 import InfoContenedor from './InfoContenedor';
 import type { PropsMapa, Vista } from './tipos';
 
@@ -92,6 +92,7 @@ export default function MapaGoogle({
         {contenedores.map((contenedor) => {
           const nivel = nivelVisual(contenedor, hora, dia);
           const elegido = contenedor.id === seleccionadoId;
+          const estimado = contenedor.nivelEstimado !== undefined;
           const diametro = elegido ? 24 : nivel === 'bajo' ? 12 : 16;
           return (
             <AdvancedMarker
@@ -103,12 +104,18 @@ export default function MapaGoogle({
               onClick={() => setAbiertoId(contenedor.id)}
             >
               <div
-                className="pin-contenedor"
+                className={estimado ? 'pin-contenedor pin-contenedor--estimado' : 'pin-contenedor'}
                 style={{
                   width: diametro,
                   height: diametro,
                   background: COLOR_NIVEL[nivel],
-                  borderColor: elegido ? '#2f6fd6' : nivel === 'desborde' ? '#d9a82b' : '#ffffff',
+                  borderColor: elegido
+                    ? '#2f6fd6'
+                    : estimado
+                      ? BORDE_ESTIMADO
+                      : nivel === 'desborde'
+                        ? '#d9a82b'
+                        : '#ffffff',
                   borderWidth: elegido ? 3 : 2,
                 }}
               />
