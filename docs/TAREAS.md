@@ -11,14 +11,15 @@ El panel web del gerente está completo y funciona con datos simulados. El backe
 | Panel web del gerente (7 pantallas, mapas con las zonas oficiales) | Hecho, en `main` |
 | Pantalla de estado de sensores y detección de fallas | Hecho, en `main` |
 | Backend: proyecto, base de datos y datos de ejemplo | Hecho, en `main` |
-| Backend: login, endpoints y lógica en el servidor | Sin empezar (Sprint 3) |
-| Panel conectado al backend | Sin empezar (Sprint 3) |
-| Despacho a demanda con tráfico y aviso al chofer | Sin empezar (Sprint 4) |
+| Backend: login y endpoints para leer zonas, contenedores, camiones e incidentes | Hecho |
+| Backend: lecturas de sensores, prioridad, rutas a demanda e incidentes, con datos simulados por un emulador | Hecho |
+| Merge del backend a `main` y panel conectado | Pendiente, después del 13/10 |
+| Contenedores sobre la calle y rutas que sigan las calles | Sin empezar (Sprint 3 y 4) |
+| Tráfico y aviso al chofer | Sin empezar (Sprint 4) |
 | App del chofer | Sin empezar (Sprint 4, versión mínima) |
 
 Para tener en cuenta:
 
-- Los datos de zonas que carga el backend quedaron viejos: se generaron antes de pasar a las zonas oficiales (empresas, comunas y ubicaciones). Se corrige con una migración nueva, ver Fase 5.
 - La rama `develop` quedó atrás de `main`: el backend y los cambios de mapas entraron directo a `main`. Hay que decidir si se sigue usando `develop` (y actualizarla) o si se trabaja con ramas que salen de `main`.
 
 Plan por sprint:
@@ -27,8 +28,8 @@ Plan por sprint:
 | --- | --- | --- |
 | 1 | Panel web con datos simulados | Terminada |
 | 2 | Base del backend, zonas oficiales en el mapa y estado de sensores | Se presenta el 13/10 |
-| 3 | El panel funciona con la API y la base de datos (parte central) | Próxima |
-| 4 | Tráfico con Google, aviso al chofer y app del chofer mínima | Pendiente |
+| 3 | El panel funciona con la API y la base de datos (parte central); contenedores ubicados sobre la calle | Próxima |
+| 4 | Rutas que siguen las calles y tráfico con Google, aviso al chofer y app del chofer mínima | Pendiente |
 | 5 | Indicadores desde la base, demo publicada y cierre | Pendiente |
 
 ## Fase 1: Base del proyecto
@@ -48,7 +49,7 @@ Plan por sprint:
 - [x] Simulación de llenado irregular (persona revolviendo)
 - [x] Historial simulado de 8 semanas para los indicadores
 - [x] Límites reales de las 7 zonas (unión de comunas, con los barrios de los datos abiertos del GCBA)
-- [ ] Reemplazar las posiciones de ejemplo de los contenedores por las del dataset de contenedores de la Ciudad
+- [ ] Contenedores sobre la calle: hoy aparecen dentro de las manzanas porque se ubican en una grilla que no mira las calles. Reemplazar las posiciones de ejemplo por las del dataset de contenedores de la Ciudad; si no alcanza, acercar cada punto a la calle más cercana (Roads API de Google). Entra como migración nueva del backend
 - [ ] Si la Dirección General nos pasa lecturas históricas, importarlas y comparar con el simulador
 
 ## Fase 3: Lógica del sistema
@@ -57,7 +58,7 @@ Plan por sprint:
 - [x] Rutas por zona con el vecino más cercano
 - [x] Detección de anomalías en el sensor
 - [x] Incidentes con confirmación del operador
-- [ ] Usar la API de rutas de Google Maps en lugar de la distancia en línea recta
+- [ ] Rutas por las calles: hoy se dibujan como líneas rectas entre paradas y cruzan por el medio de las casas. Pedir el recorrido a la Routes API de Google (devuelve el trazado, los km reales y la duración), guardarlo en la ruta y dibujarlo en el panel. Se hace junto con el tráfico (Sprint 4)
 - [ ] Recalcular la ruta automáticamente cuando aparece un contenedor prioritario nuevo (Release 2)
 - [x] Detección de sensores con falla usando solo el nivel de llenado: sin señal, valor congelado y lecturas irregulares
 - [x] Nivel estimado para los contenedores con el sensor caído o trabado (se usa para priorizar)
@@ -88,18 +89,27 @@ Plan por sprint:
 
 - [x] Elegir tecnología: Spring Boot con PostgreSQL, en la carpeta `backend/`
 - [x] Esqueleto del backend: migraciones con las 10 tablas, datos de ejemplo, Swagger y formato de error
-- [ ] Migración nueva (`V3`) con las zonas oficiales: empresas, comunas, color y ubicaciones; volver a generar los contenedores y camiones con `backend/scripts/exportar-semilla.ts`
-- [ ] Sumar al modelo el estado del sensor y el nivel estimado (cuando entre `feature/estado-sensores`)
+- [x] Migración `V3` con las zonas oficiales: empresas, comunas, color y ubicaciones nuevas de contenedores y camiones
+- [x] Sumar al modelo el estado del sensor y el nivel estimado
 
 Sprint 3, un bloque por integrante:
 
-- [ ] Bloque 1, login y datos: login con JWT y roles; endpoints para leer zonas, contenedores, camiones e incidentes; el login del front pasa a la API
-- [ ] Bloque 2, sensores y prioridad: recibir lecturas, detectar anomalías y fallas de sensor, calcular la prioridad en el servidor
-- [ ] Bloque 3, rutas a demanda: despacho automático y manual, con el orden de paradas por vecino más cercano
-- [ ] Bloque 4, incidentes y emulador: confirmar y descartar incidentes, reportes vecinales; el simulador pasa a mandar datos a la API; conectar `SimulacionContext` con la API
+- [x] Bloque 1, login y datos (backend): login con JWT y roles; endpoints para leer zonas, contenedores, camiones e incidentes
+- [ ] Bloque 1, login y datos (front): el login del panel pasa a la API y se borran las contraseñas de `src/data/usuarios.ts`
+- [x] Bloque 2, sensores y prioridad: recibir lecturas, detectar anomalías y fallas de sensor, calcular la prioridad en el servidor
+- [x] Bloque 3, rutas a demanda: despacho automático y manual, con el orden de paradas por vecino más cercano
+- [x] Pronóstico de desborde con el patrón de llenado aprendido de cada contenedor (promedio por hora y día de la semana)
+- [x] Garantía de servicio: tiempo máximo de 48 horas sin recolectar y paradas de paso
+- [ ] En el front: mostrar el motivo `tiempo`, la hora estimada de desborde y las paradas de paso
+- [ ] En el front: adaptar los tipos a la API (fechas en texto ISO, `id` numérico en incidentes) y borrar `src/logic/`, que queda duplicada con el backend
+- [x] Bloque 4, incidentes y emulador (backend): confirmar y descartar incidentes, reportes vecinales, cierre automático; emulador de sensores y choferes dentro del backend
+- [ ] Bloque 4 (front): conectar `SimulacionContext` con la API, para que el panel deje de simular
+
+- [ ] Contenedores sobre la calle: reemplazar las posiciones de ejemplo por las del dataset de contenedores de la Ciudad (migración nueva)
 
 Sprint 4:
 
+- [ ] Rutas por las calles: pedir el recorrido a la Routes API de Google, guardarlo en la ruta y dibujarlo en el panel en lugar de las líneas rectas
 - [ ] Elegir la hora de salida con menos tráfico (Google Routes API, con una tabla simulada si no hay clave)
 - [ ] Notificación push al chofer cuando se le asigna una ruta (Firebase)
 - [ ] Endpoints de la app del chofer: registrar el celular, ver la ruta e iniciarla

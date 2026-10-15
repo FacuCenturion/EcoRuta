@@ -16,7 +16,7 @@ import org.testcontainers.DockerClientFactory;
  * Necesita Docker: si no está, estas pruebas se saltean.
  */
 @Import(TestcontainersConfiguration.class)
-@SpringBootTest
+@SpringBootTest(properties = "ecoruta.emulador.activo=false")
 @EnabledIf("dockerDisponible")
 class EcorutaBackendApplicationTests {
 

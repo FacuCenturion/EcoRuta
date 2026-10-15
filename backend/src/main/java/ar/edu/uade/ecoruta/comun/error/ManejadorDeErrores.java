@@ -8,9 +8,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
@@ -31,6 +34,18 @@ public class ManejadorDeErrores {
         return responder(HttpStatus.BAD_REQUEST, "DATOS_INVALIDOS", detalle);
     }
 
+    // Validaciones sobre parámetros o sobre los elementos de una lista (por ejemplo, un lote de lecturas)
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    ResponseEntity<ErrorApi> parametrosInvalidos(HandlerMethodValidationException ex) {
+        String detalle = ex.getAllErrors().stream()
+                .map(error -> error instanceof FieldError campo
+                        ? campo.getField() + ": " + campo.getDefaultMessage()
+                        : error.getDefaultMessage())
+                .distinct()
+                .collect(Collectors.joining("; "));
+        return responder(HttpStatus.BAD_REQUEST, "DATOS_INVALIDOS", detalle);
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<ErrorApi> jsonInvalido(HttpMessageNotReadableException ex) {
         return responder(HttpStatus.BAD_REQUEST, "JSON_INVALIDO", "El cuerpo del pedido no es un JSON válido.");
@@ -40,6 +55,11 @@ public class ManejadorDeErrores {
     ResponseEntity<ErrorApi> parametroInvalido(MethodArgumentTypeMismatchException ex) {
         return responder(HttpStatus.BAD_REQUEST, "PARAMETRO_INVALIDO",
                 "El parámetro " + ex.getName() + " tiene un valor inválido.");
+    }
+
+    @ExceptionHandler(BadCredentialsException.class)
+    ResponseEntity<ErrorApi> credencialesInvalidas(BadCredentialsException ex) {
+        return responder(HttpStatus.UNAUTHORIZED, "CREDENCIALES_INVALIDAS", ex.getMessage());
     }
 
     @ExceptionHandler(AccessDeniedException.class)
