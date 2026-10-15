@@ -50,7 +50,8 @@ public class ReinicioDeLaDemo {
             jdbc.execute("TRUNCATE notificacion, parada, ruta, incidente, lectura_sensor, patron_llenado RESTART IDENTITY");
             jdbc.update("""
                     UPDATE contenedor SET llenado = llenado_inicial, ultima_lectura_at = NULL, anomalia = FALSE,
-                           estado_sensor = 'funcionando', nivel_estimado = NULL, ultima_recoleccion_at = NULL
+                           estado_sensor = 'funcionando', nivel_estimado = NULL, ultima_recoleccion_at = NULL,
+                           desborde_desde = NULL
                     """);
             jdbc.update("""
                     UPDATE camion k SET estado = 'en_base', carga_pct = 0, km_recorridos_hoy = 0,

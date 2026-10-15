@@ -45,8 +45,10 @@ public class PatronesDeLlenado {
         private final double[][] horas = new double[7][24];
 
         Double ritmo(int dia, int hora) {
+            // El ruido del sensor puede dar un promedio negativo en una franja con poca
+            // observación; un contenedor no se vacía solo, así que el piso es cero.
             if (horas[dia][hora] >= HORAS_MINIMAS_POR_DIA) {
-                return delta[dia][hora] / horas[dia][hora];
+                return Math.max(0, delta[dia][hora] / horas[dia][hora]);
             }
             double sumaDelta = 0;
             double sumaHoras = 0;
@@ -54,7 +56,7 @@ public class PatronesDeLlenado {
                 sumaDelta += delta[d][hora];
                 sumaHoras += horas[d][hora];
             }
-            return sumaHoras >= HORAS_MINIMAS_POR_HORA ? sumaDelta / sumaHoras : null;
+            return sumaHoras >= HORAS_MINIMAS_POR_HORA ? Math.max(0, sumaDelta / sumaHoras) : null;
         }
     }
 
@@ -106,7 +108,8 @@ public class PatronesDeLlenado {
     /**
      * Rearma el patrón con las lecturas de las últimas dos semanas. Mira cuánto subió el
      * nivel entre cada lectura y la anterior, y descarta lo que no es llenado normal:
-     * - una bajada (pasó el camión, o el sensor saltó);
+     * - una bajada de más de 2 puntos (pasó el camión, o el sensor saltó). Las bajadas chicas
+     *   son el ruido normal del sensor y se cuentan: si no, el ritmo saldría inflado;
      * - una subida imposible de tan rápida (el sensor saltó);
      * - un hueco de más de una hora sin lecturas;
      * - un contenedor que ya está lleno (no puede subir más).
@@ -140,7 +143,7 @@ public class PatronesDeLlenado {
                     WHERE l.medido_at >= :desde AND c.estado_sensor IN ('funcionando', 'irregular')
                     WINDOW w AS (PARTITION BY l.contenedor_id ORDER BY l.medido_at)
                 ) tramos
-                WHERE horas > 0 AND horas <= 1 AND delta >= 0 AND delta / horas <= :ritmoMaximo AND llenado < :lleno
+                WHERE horas > 0 AND horas <= 1 AND delta >= -2 AND delta / horas <= :ritmoMaximo AND llenado < :lleno
                 GROUP BY contenedor_id, dia, hora
                 """, datos);
         cargar();

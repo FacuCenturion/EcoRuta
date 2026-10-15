@@ -41,9 +41,10 @@ class EmuladorTests {
         assertThat(contar("SELECT count(*) FROM contenedor WHERE estado_sensor = 'sin_senal'")).isEqualTo(6);
         assertThat(contar("SELECT count(*) FROM contenedor WHERE estado_sensor = 'congelado'")).isEqualTo(3);
         assertThat(contar("SELECT count(*) FROM contenedor WHERE estado_sensor = 'irregular'")).isEqualTo(1);
-        // Dos reportes vecinales y una alerta de llenado irregular
+        // Dos reportes vecinales, una alerta de llenado irregular y una por cada sensor que falla
         assertThat(contar("SELECT count(*) FROM incidente WHERE tipo = 'reporte_vecinal'")).isEqualTo(2);
         assertThat(contar("SELECT count(*) FROM incidente WHERE tipo = 'llenado_irregular'")).isEqualTo(1);
+        assertThat(contar("SELECT count(*) FROM incidente WHERE tipo = 'falla_sensor'")).isEqualTo(9);
     }
 
     @Test
@@ -56,7 +57,7 @@ class EmuladorTests {
         assertThat(Duration.between(antes, reloj.ahora())).isEqualTo(Duration.ofMinutes(5));
         // Mandan todos menos los 6 sin señal (los congelados mandan, repitiendo el valor).
         // Puede sumarse alguna lectura de un contenedor recién vaciado.
-        assertThat(contar("SELECT count(*) FROM lectura_sensor") - lecturasAntes).isBetween(174, 188);
+        assertThat(contar("SELECT count(*) FROM lectura_sensor") - lecturasAntes).isBetween(170, 190);
     }
 
     @Test

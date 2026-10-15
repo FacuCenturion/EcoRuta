@@ -50,6 +50,11 @@ public final class Parametros {
     public static final int HORAS_VALOR_CONGELADO = 4; // misma lectura durante este tiempo
     public static final int NIVEL_LLENO = 98; // un contenedor lleno marca siempre lo mismo y no es una falla
     public static final int NIVEL_TRAS_RECOLECCION = 4; // nivel que se asume apenas el chofer lo vacía
+    // Sensor trabado: después de vaciarlo, sigue marcando casi lo mismo que antes (a menos de esto)
+    public static final int TOLERANCIA_SENSOR_TRABADO = 10;
+    public static final int NIVEL_MINIMO_PARA_TRABADO = 40; // si estaba casi vacío no se puede saber
+    // Un contenedor no se vuelve a llenar en tan poco tiempo: lecturas de tope recién vaciado no son desborde
+    public static final int HORAS_SIN_DESBORDE_TRAS_RECOLECCION = 2;
 
     private Parametros() {
     }

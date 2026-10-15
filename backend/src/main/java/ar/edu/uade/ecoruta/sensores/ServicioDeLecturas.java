@@ -62,6 +62,17 @@ public class ServicioDeLecturas {
         nuevas.forEach(l -> porId.get(l.contenedorId()).registrarLectura(l.llenado(), l.medidoAt()));
 
         Instant ahora = reloj.ahora();
+        // Un sensor que marca el tope es un desborde, salvo que lo hayan vaciado recién
+        // (un contenedor no se vuelve a llenar tan rápido: es el sensor que no bajó).
+        for (LecturaNueva lectura : nuevas) {
+            Contenedor contenedor = porId.get(lectura.contenedorId());
+            if (lectura.llenado() >= Parametros.NIVEL_LLENO && !contenedor.estaDesbordado()
+                    && !contenedor.vaciadoHaceMenosDe(Parametros.HORAS_SIN_DESBORDE_TRAS_RECOLECCION, ahora)) {
+                contenedor.marcarDesborde(lectura.medidoAt());
+                incidentes.crearDesborde(contenedor, false, ahora);
+            }
+        }
+
         int anomaliasNuevas = 0;
         Map<String, List<Integer>> ultimas = lecturas.ultimas(ids, Parametros.LECTURAS_PARA_ANOMALIA);
         for (Contenedor contenedor : porId.values()) {

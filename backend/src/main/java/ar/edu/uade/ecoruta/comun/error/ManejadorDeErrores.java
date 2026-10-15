@@ -46,6 +46,11 @@ public class ManejadorDeErrores {
         return responder(HttpStatus.BAD_REQUEST, "DATOS_INVALIDOS", detalle);
     }
 
+    @ExceptionHandler(DatosInvalidosException.class)
+    ResponseEntity<ErrorApi> datosQueNoCorresponden(DatosInvalidosException ex) {
+        return responder(HttpStatus.BAD_REQUEST, "DATOS_INVALIDOS", ex.getMessage());
+    }
+
     @ExceptionHandler(HttpMessageNotReadableException.class)
     ResponseEntity<ErrorApi> jsonInvalido(HttpMessageNotReadableException ex) {
         return responder(HttpStatus.BAD_REQUEST, "JSON_INVALIDO", "El cuerpo del pedido no es un JSON válido.");

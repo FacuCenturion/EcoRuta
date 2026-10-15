@@ -94,6 +94,35 @@ public class RepositorioDeLecturas {
                 String.class));
     }
 
+    /**
+     * Sensores que no bajaron después de que un camión vació el contenedor: todas las lecturas
+     * desde la recolección siguen casi en el nivel de antes. Si bajaron alguna vez (porque se
+     * vació de verdad, o porque el sensor se arregló), no cuenta.
+     */
+    public Set<String> trabadosTrasRecoleccion(Instant desde) {
+        return new HashSet<>(jdbc.queryForList("""
+                SELECT c.id
+                FROM contenedor c
+                CROSS JOIN LATERAL (
+                    SELECT llenado AS antes FROM lectura_sensor
+                    WHERE contenedor_id = c.id AND medido_at < c.ultima_recoleccion_at
+                    ORDER BY medido_at DESC LIMIT 1
+                ) previa
+                CROSS JOIN LATERAL (
+                    SELECT count(*) AS cantidad, min(llenado) AS minimo FROM lectura_sensor
+                    WHERE contenedor_id = c.id AND medido_at >= c.ultima_recoleccion_at + interval '10 minutes'
+                ) despues
+                WHERE c.ultima_recoleccion_at >= :desde
+                  AND previa.antes >= :nivelMinimo
+                  AND despues.cantidad >= 2
+                  AND despues.minimo >= previa.antes - :tolerancia
+                """,
+                new MapSqlParameterSource().addValue("desde", Fechas.paraLaBase(desde))
+                        .addValue("nivelMinimo", Parametros.NIVEL_MINIMO_PARA_TRABADO)
+                        .addValue("tolerancia", Parametros.TOLERANCIA_SENSOR_TRABADO),
+                String.class));
+    }
+
     /** Desde cuándo el sensor repite el valor actual: ahí dejó de medir. */
     public Instant inicioDeLaRacha(String contenedorId, int valorActual) {
         OffsetDateTime inicio = jdbc.queryForObject("""

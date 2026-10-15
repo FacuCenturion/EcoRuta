@@ -48,7 +48,7 @@ public class Contenedor {
     private boolean activo;
 
     @Column(name = "estado_sensor")
-    private String estadoSensor; // funcionando, irregular, congelado o sin_senal
+    private String estadoSensor; // funcionando, irregular, congelado, sin_senal o trabado
 
     @JdbcTypeCode(SqlTypes.SMALLINT)
     @Column(name = "nivel_estimado")
@@ -56,6 +56,9 @@ public class Contenedor {
 
     @Column(name = "ultima_recoleccion_at")
     private OffsetDateTime ultimaRecoleccionAt;
+
+    @Column(name = "desborde_desde")
+    private OffsetDateTime desbordeDesde; // desde cuándo está lleno; vacío si no lo está
 
     protected Contenedor() {
     }
@@ -81,6 +84,21 @@ public class Contenedor {
     public void registrarRecoleccion(Instant momento) {
         ultimaRecoleccionAt = Fechas.paraLaBase(momento);
         anomalia = false;
+        desbordeDesde = null;
+    }
+
+    public void marcarDesborde(Instant momento) {
+        desbordeDesde = Fechas.paraLaBase(momento);
+    }
+
+    public boolean estaDesbordado() {
+        return desbordeDesde != null;
+    }
+
+    /** Si un camión lo vació hace menos de esas horas. */
+    public boolean vaciadoHaceMenosDe(int horas, Instant ahora) {
+        return ultimaRecoleccionAt != null
+                && ultimaRecoleccionAt.toInstant().isAfter(ahora.minus(java.time.Duration.ofHours(horas)));
     }
 
     public Coordenada posicion() {
@@ -145,5 +163,9 @@ public class Contenedor {
 
     public OffsetDateTime getUltimaRecoleccionAt() {
         return ultimaRecoleccionAt;
+    }
+
+    public OffsetDateTime getDesbordeDesde() {
+        return desbordeDesde;
     }
 }

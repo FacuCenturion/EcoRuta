@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 
 import ar.edu.uade.ecoruta.contenedores.Contenedor;
 import ar.edu.uade.ecoruta.contenedores.ContenedorRepositorio;
-import ar.edu.uade.ecoruta.contenedores.ModeloDeLlenado;
 import ar.edu.uade.ecoruta.incidentes.ServicioDeIncidentes;
 import ar.edu.uade.ecoruta.sensores.LecturaNueva;
 import ar.edu.uade.ecoruta.sensores.RepositorioDeLecturas;
@@ -58,7 +57,7 @@ class HistorialInicial {
     }
 
     /** Devuelve qué falla le quedó puesta a cada sensor (solo los que tienen alguna). */
-    Map<String, String> cargar(Instant ahora, Random azar) {
+    Map<String, String> cargar(Instant ahora, Random azar, MundoSimulado mundo) {
         List<Contenedor> todos = contenedores.findByActivoTrueOrderById();
         Map<String, String> fallas = sortearFallas(todos, azar);
         List<LecturaNueva> filas = new ArrayList<>();
@@ -72,8 +71,9 @@ class HistorialInicial {
             // cero es porque ahí pasó el camión: antes de eso el contenedor estaba lleno.
             for (int i = 0; i < PASOS; i++) {
                 Instant momento = ahora.minus(Duration.ofMinutes((long) i * EmuladorDeSensores.MINUTOS_POR_PASO));
-                curva.add(new Punto(momento, (int) Math.round(nivel)));
-                nivel -= ModeloDeLlenado.incrementoPorHora(c.velocidad(), momento)
+                double conRuido = nivel + azar.nextGaussian() * EmuladorDeSensores.RUIDO_DEL_SENSOR;
+                curva.add(new Punto(momento, (int) Math.round(Math.clamp(conRuido, 0, 100))));
+                nivel -= mundo.ritmoPorHora(c, momento)
                         * (EmuladorDeSensores.MINUTOS_POR_PASO / 60.0) * (0.7 + azar.nextDouble() * 0.6);
                 if (nivel < 2) {
                     if (ultimaRecoleccion == null) {

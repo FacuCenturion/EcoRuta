@@ -25,6 +25,8 @@ public class Incidente {
     public static final String LLENADO_IRREGULAR = "llenado_irregular";
     public static final String NO_SE_PUDO = "no_se_pudo";
     public static final String REPORTE_VECINAL = "reporte_vecinal";
+    public static final String FALLA_SENSOR = "falla_sensor";
+    public static final String DESBORDE = "desborde";
 
     public static final String PENDIENTE = "pendiente";
     public static final String CONFIRMADO = "confirmado";
@@ -34,7 +36,7 @@ public class Incidente {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String tipo; // llenado_irregular, no_se_pudo, reporte_vecinal o ruta_no_iniciada
+    private String tipo; // llenado_irregular, no_se_pudo, reporte_vecinal, ruta_no_iniciada, falla_sensor o desborde
     private String estado; // pendiente, confirmado, descartado o resuelto
 
     @ManyToOne(fetch = FetchType.LAZY)

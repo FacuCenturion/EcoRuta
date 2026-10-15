@@ -50,6 +50,29 @@ public class ServicioDeIncidentes {
                 "Enviar cuadrilla de limpieza", origen == null || origen.isBlank() ? "Boti" : origen.trim(), ahora));
     }
 
+    /** Un sensor dejó de funcionar. Mientras tanto el sistema estima el nivel del contenedor. */
+    @Transactional
+    public Incidente crearFallaSensor(Contenedor contenedor, String estadoSensor, Instant ahora) {
+        String descripcion = switch (estadoSensor) {
+            case "sin_senal" -> "El sensor no manda datos hace más de 2 horas.";
+            case "congelado" -> "El sensor marca exactamente lo mismo hace más de 4 horas.";
+            case "trabado" -> "El sensor no bajó después de que el camión vació el contenedor.";
+            default -> "El sensor no funciona bien.";
+        };
+        return incidentes.save(new Incidente(Incidente.FALLA_SENSOR, contenedor, null, descripcion,
+                "Revisar el sensor. Mientras tanto se usa el nivel estimado", null, ahora));
+    }
+
+    /** El contenedor llegó al tope. Si el sensor no informa, el desborde es estimado. */
+    @Transactional
+    public Incidente crearDesborde(Contenedor contenedor, boolean estimado, Instant ahora) {
+        String descripcion = estimado
+                ? "Se estima que el contenedor está lleno: el sensor no informa y ya debería haber llegado al tope."
+                : "El contenedor llegó al tope: puede haber basura afuera.";
+        return incidentes.save(new Incidente(Incidente.DESBORDE, contenedor, null, descripcion,
+                "Mandar el camión del sector ahora", null, ahora));
+    }
+
     /** El operador confirma o descarta un incidente pendiente. */
     @Transactional
     public Incidente decidir(long incidenteId, String decision, Usuario usuario, Instant ahora) {
@@ -74,14 +97,18 @@ public class ServicioDeIncidentes {
                 continue;
             }
             boolean resuelto;
-            if (incidente.getTipo().equals(Incidente.LLENADO_IRREGULAR)) {
+            if (incidente.getTipo().equals(Incidente.FALLA_SENSOR)) {
+                // Se cierra cuando el sensor vuelve a mandar datos que tienen sentido
+                String estado = contenedor.getEstadoSensor();
+                resuelto = estado.equals("funcionando") || estado.equals("irregular");
+            } else if (incidente.getTipo().equals(Incidente.LLENADO_IRREGULAR)) {
                 // El sensor volvió a la normalidad y, o ya lo vio un operador, o pasó el tiempo de la alerta
                 boolean vencida = Duration.between(incidente.getCreadoAt().toInstant(), ahora)
                         .compareTo(VENCIMIENTO_DE_ALERTA) > 0;
                 resuelto = !contenedor.isAnomalia()
                         && (incidente.getEstado().equals(Incidente.CONFIRMADO) || vencida);
             } else {
-                // Reporte vecinal o "no se pudo": se resuelve cuando un camión lo vacía después
+                // Reporte vecinal, "no se pudo" o desborde: se resuelve cuando un camión lo vacía después
                 resuelto = contenedor.getUltimaRecoleccionAt() != null
                         && contenedor.getUltimaRecoleccionAt().isAfter(incidente.getCreadoAt());
             }

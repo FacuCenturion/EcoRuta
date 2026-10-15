@@ -5,10 +5,12 @@ import java.time.Instant;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,9 +27,9 @@ import ar.edu.uade.ecoruta.camiones.CamionRepositorio;
 import ar.edu.uade.ecoruta.comun.Fechas;
 import ar.edu.uade.ecoruta.comun.Parametros;
 import ar.edu.uade.ecoruta.comun.RelojDelSistema;
+import ar.edu.uade.ecoruta.comun.error.RecursoNoEncontradoException;
 import ar.edu.uade.ecoruta.contenedores.Contenedor;
 import ar.edu.uade.ecoruta.contenedores.ContenedorRepositorio;
-import ar.edu.uade.ecoruta.contenedores.ModeloDeLlenado;
 import ar.edu.uade.ecoruta.contenedores.ServicioDePrioridad;
 import ar.edu.uade.ecoruta.incidentes.ServicioDeIncidentes;
 import ar.edu.uade.ecoruta.rutas.Parada;
@@ -44,11 +46,12 @@ import ar.edu.uade.ecoruta.sensores.ServicioDeLecturas;
 /**
  * Hace de "mundo real" mientras no haya sensores ni choferes: cada paso adelanta 5 minutos
  * la hora del sistema, llena los contenedores, manda las lecturas de los sensores y mueve
- * los camiones por sus rutas. Reemplaza a src/simulator/simulador.ts del front.
+ * los camiones por sus rutas.
  *
- * Lo importante: el emulador sabe cosas que el sistema no (el nivel real de cada contenedor,
- * qué sensor está roto). Al sistema solo le llega lo que le llegaría de verdad: lecturas con
- * contenedor, nivel y hora, y lo que confirma el chofer. Todo lo demás lo tiene que deducir.
+ * Lo importante: el emulador sabe cosas que el sistema no (cuánta basura genera cada
+ * contenedor y cuándo, qué sensor está roto). Al sistema solo le llega lo que le llegaría de
+ * verdad: lecturas con contenedor, nivel y hora, y lo que confirma el chofer. Todo lo demás lo
+ * tiene que deducir. Los casos que cubre están en la guía de backend.
  */
 @Component
 @ConditionalOnProperty(name = "ecoruta.emulador.activo", havingValue = "true")
@@ -64,18 +67,32 @@ public class EmuladorDeSensores {
     // Se guardan las lecturas que usa el patrón de llenado, más un día de margen
     private static final Duration HISTORIAL_GUARDADO = Duration.ofDays(Parametros.DIAS_DE_LECTURAS_PARA_EL_PATRON + 1);
 
-    private static final double PROBABILIDAD_NO_SE_PUDO = 0.08;
-    private static final double PROBABILIDAD_FALLA_SENSOR = 0.01; // por paso, en algún sensor de la ciudad
-    private static final double PROBABILIDAD_REPORTE_VECINAL = 0.04;
-    private static final double PROBABILIDAD_REVUELVEN = 0.0005; // por paso y por contenedor
+    // Con qué frecuencia pasa cada cosa, por paso de 5 minutos
+    private static final double PROBABILIDAD_NO_SE_PUDO = 0.06; // por parada
+    private static final double PROBABILIDAD_FALLA_SENSOR = 0.01; // en algún sensor de la zona: ~3 por día
+    private static final double PROBABILIDAD_SENSOR_TRABADO = 0.03; // al vaciar un contenedor
+    private static final double PROBABILIDAD_REPORTE_VECINAL = 0.03; // ~9 por día
+    private static final double PROBABILIDAD_REPORTE_SIN_MOTIVO = 0.3; // vecino que reporta un contenedor vacío
+    private static final double PROBABILIDAD_REVUELVEN = 0.0005; // por contenedor
+    private static final double PROBABILIDAD_EVENTO_MASIVO = 0.0015; // en algún sector: ~1 cada 2 días
+    private static final double FACTOR_EVENTO_MASIVO = 3;
+    // Un sensor real nunca marca exactamente lo mismo durante horas: fluctúa un poco
+    // (compactación, temperatura). Sin este ruido, un contenedor que casi no se usa parecería congelado.
+    static final double RUIDO_DEL_SENSOR = 0.7; // desvío en puntos de llenado
 
-    private static final String SIN_FALLA = "ninguna";
+    static final String SIN_FALLA = "ninguna";
+    static final String SIN_SENAL = ServicioDeEstadoDeSensores.SIN_SENAL;
+    static final String CONGELADO = ServicioDeEstadoDeSensores.CONGELADO;
+    static final String TRABADO = ServicioDeEstadoDeSensores.TRABADO;
 
     private static final List<String> MOTIVOS_NO_SE_PUDO = List.of("Auto estacionado", "Obra o calle cortada",
             "Contenedor dañado", "Basura fuera del contenedor", "Sensor marca mal");
     private static final List<String> COMENTARIOS_VECINALES = List.of(
             "Hay bolsas tiradas al lado del contenedor.", "El contenedor está lleno y huele mal.",
             "Se desbordó y no entra más basura.", "Hay residuos desparramados en la vereda.");
+    private static final List<String> COMENTARIOS_SIN_MOTIVO = List.of(
+            "El contenedor está roto y no cierra la tapa.", "Pusieron el contenedor muy cerca de la entrada.",
+            "Hay olor en la cuadra.");
 
     private final RelojDelSistema reloj;
     private final ContenedorRepositorio contenedores;
@@ -89,30 +106,34 @@ public class EmuladorDeSensores {
     private final ServicioDeDespacho despacho;
     private final ServicioDeRutas servicioDeRutas;
     private final HistorialInicial historialInicial;
+    private final MundoSimulado mundo;
     private final TransactionTemplate transaccion;
+    private final boolean automatico;
 
     // Lo que solo conoce el emulador
     private final Map<String, Double> nivelReal = new HashMap<>();
-    private final Map<String, String> falla = new HashMap<>(); // ninguna, sin_senal o congelado
+    private final Map<String, String> falla = new HashMap<>(); // ninguna, sin_senal, congelado o trabado
+    private final Map<String, Instant> reparaEn = new HashMap<>(); // cuándo vuelve a funcionar el sensor
+    private final Map<String, Integer> valorTrabado = new HashMap<>(); // lo que repite un sensor trabado
+    private final Set<String> trabarAlVaciar = new HashSet<>(); // casos de demo: se traba en la próxima recolección
     private final Map<String, Integer> revuelvenHasta = new HashMap<>(); // paso hasta el que alguien revuelve
     private final Map<String, Double> minutosDelCamion = new HashMap<>();
     private final Map<String, Integer> pasosDeDescarga = new HashMap<>();
+
     // Semilla fija: después de reiniciar, la demo vuelve a salir igual
     private static final long SEMILLA = 2026;
     private Random azar = new Random(SEMILLA);
     private int paso;
     private volatile boolean listo;
     private long proximoPasoMs;
-    private final Object turno = new Object(); // un paso, un reinicio o una carga a la vez
-    private final boolean automatico;
+    private final Object turno = new Object(); // un paso, un reinicio o un caso de demo a la vez
 
     EmuladorDeSensores(RelojDelSistema reloj, ContenedorRepositorio contenedores, CamionRepositorio camiones,
             RutaRepositorio rutas, RepositorioDeLecturas lecturas, ServicioDeLecturas servicioDeLecturas,
             ServicioDeEstadoDeSensores estadoDeSensores, ServicioDeIncidentes incidentes, ServicioDePrioridad prioridad,
             ServicioDeDespacho despacho, ServicioDeRutas servicioDeRutas, HistorialInicial historialInicial,
-            TransactionTemplate transaccion,
+            MundoSimulado mundo, TransactionTemplate transaccion,
             @Value("${ecoruta.emulador.automatico:true}") boolean automatico) {
-        this.automatico = automatico;
         this.reloj = reloj;
         this.contenedores = contenedores;
         this.camiones = camiones;
@@ -125,7 +146,9 @@ public class EmuladorDeSensores {
         this.despacho = despacho;
         this.servicioDeRutas = servicioDeRutas;
         this.historialInicial = historialInicial;
+        this.mundo = mundo;
         this.transaccion = transaccion;
+        this.automatico = automatico;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -146,9 +169,10 @@ public class EmuladorDeSensores {
             reloj.fijar(Instant.now().atZone(Fechas.BUENOS_AIRES).toLocalDate().atTime(HORA_INICIAL)
                     .atZone(Fechas.BUENOS_AIRES).toInstant());
         }
+        Instant ahora = reloj.ahora();
         Map<String, String> fallasIniciales = Map.of();
         if (!lecturas.hayLecturas()) {
-            fallasIniciales = historialInicial.cargar(reloj.ahora(), azar);
+            fallasIniciales = historialInicial.cargar(ahora, azar, mundo);
             // El sensor irregular de la demo sigue así unos pasos más antes de normalizarse
             revuelvenHasta.put(HistorialInicial.SENSOR_IRREGULAR, 6);
             log.info("Emulador: se cargaron 24 h de lecturas de ejemplo");
@@ -157,9 +181,14 @@ public class EmuladorDeSensores {
             // Al reiniciar no sabemos el nivel real: se parte de lo que el sistema cree
             nivelReal.put(c.getId(), (double) (c.getNivelEstimado() != null ? c.getNivelEstimado() : c.getLlenado()));
             String estadoSensor = c.getEstadoSensor();
-            boolean rota = estadoSensor.equals(ServicioDeEstadoDeSensores.SIN_SENAL)
-                    || estadoSensor.equals(ServicioDeEstadoDeSensores.CONGELADO);
-            falla.put(c.getId(), fallasIniciales.getOrDefault(c.getId(), rota ? estadoSensor : SIN_FALLA));
+            boolean rota = estadoSensor.equals(SIN_SENAL) || estadoSensor.equals(CONGELADO) || estadoSensor.equals(TRABADO);
+            String suFalla = fallasIniciales.getOrDefault(c.getId(), rota ? estadoSensor : SIN_FALLA);
+            falla.put(c.getId(), suFalla);
+            if (!suFalla.equals(SIN_FALLA)) {
+                // Las fallas del arranque se arreglan en algún momento del día: se ve la recuperación
+                reparaEn.put(c.getId(), ahora.plus(Duration.ofMinutes(Math.round(entre(4, 20) * 60))));
+                valorTrabado.put(c.getId(), c.getLlenado());
+            }
         }
     }
 
@@ -167,16 +196,20 @@ public class EmuladorDeSensores {
     void olvidar() {
         nivelReal.clear();
         falla.clear();
+        reparaEn.clear();
+        valorTrabado.clear();
+        trabarAlVaciar.clear();
         revuelvenHasta.clear();
         minutosDelCamion.clear();
         pasosDeDescarga.clear();
+        mundo.olvidarEventos();
         azar = new Random(SEMILLA);
         paso = 0;
         proximoPasoMs = 0;
     }
 
-    /** Para hacer algo con el emulador detenido (reiniciar la demo, por ejemplo). */
-    <T> T conElEmuladorDetenido(java.util.function.Supplier<T> accion) {
+    /** Para hacer algo con el emulador detenido (reiniciar la demo, disparar un caso). */
+    <T> T conElEmuladorDetenido(Supplier<T> accion) {
         synchronized (turno) {
             return accion.get();
         }
@@ -218,14 +251,18 @@ public class EmuladorDeSensores {
         if (!Fechas.inicioDelDia(antes).equals(Fechas.inicioDelDia(ahora))) {
             flota.forEach(Camion::reiniciarKmDelDia);
         }
-
-        // 1) Los contenedores se llenan y los sensores informan
         List<Contenedor> todos = contenedores.findByActivoTrueOrderById();
+
+        // 1) Lo que pasa en el mundo: eventos masivos y sensores que se rompen o se arreglan
+        sortearEventoMasivo(todos, ahora);
+        repararSensores(ahora);
+        sortearFallaDeSensor(todos, ahora);
+
+        // 2) Los contenedores se llenan y los sensores informan
         List<LecturaNueva> informadas = new ArrayList<>();
         for (Contenedor c : todos) {
             String id = c.getId();
-            double incremento = ModeloDeLlenado.incrementoPorHora(c.velocidad(), ahora) * (MINUTOS_POR_PASO / 60.0)
-                    * entre(0.7, 1.3);
+            double incremento = mundo.ritmoPorHora(c, ahora) * (MINUTOS_POR_PASO / 60.0) * entre(0.7, 1.3);
             double nivel = Math.min(100, nivelReal.get(id) + incremento);
             nivelReal.put(id, nivel);
 
@@ -234,38 +271,27 @@ public class EmuladorDeSensores {
                     && azar.nextDouble() < PROBABILIDAD_REVUELVEN) {
                 revuelvenHasta.put(id, paso + 8);
             }
-            double lectura = nivel;
+            double lectura = nivel + azar.nextGaussian() * RUIDO_DEL_SENSOR;
             if (revuelvenHasta.getOrDefault(id, 0) > paso) {
                 lectura += (paso % 2 == 0 ? 1 : -1) * entre(6, 12);
             }
 
-            // Un sensor trabado repite su valor; uno sin señal no manda nada
-            String suFalla = falla.get(id);
-            if (suFalla.equals(SIN_FALLA)) {
-                informadas.add(new LecturaNueva(id, (int) Math.round(Math.clamp(lectura, 0, 100)), ahora));
-            } else if (suFalla.equals(ServicioDeEstadoDeSensores.CONGELADO)) {
-                informadas.add(new LecturaNueva(id, c.getLlenado(), ahora));
+            // Un sensor congelado repite su último valor, uno trabado repite el de antes de vaciarse
+            // y uno sin señal no manda nada
+            switch (falla.get(id)) {
+                case SIN_FALLA -> informadas.add(new LecturaNueva(id, (int) Math.round(Math.clamp(lectura, 0, 100)), ahora));
+                case CONGELADO -> informadas.add(new LecturaNueva(id, c.getLlenado(), ahora));
+                case TRABADO -> informadas.add(new LecturaNueva(id, valorTrabado.getOrDefault(id, c.getLlenado()), ahora));
+                default -> {
+                    // sin señal
+                }
             }
         }
         servicioDeLecturas.registrar(informadas);
 
-        // 2) De vez en cuando un sensor sano deja de funcionar
-        if (azar.nextDouble() < PROBABILIDAD_FALLA_SENSOR) {
-            List<Contenedor> sanos = todos.stream()
-                    .filter(c -> falla.get(c.getId()).equals(SIN_FALLA) && !c.isAnomalia()).toList();
-            if (!sanos.isEmpty()) {
-                falla.put(elegir(sanos).getId(), azar.nextBoolean() ? ServicioDeEstadoDeSensores.SIN_SENAL
-                        : ServicioDeEstadoDeSensores.CONGELADO);
-            }
-        }
-
         // 3) A veces entra un reporte de un vecino por Boti
         if (azar.nextDouble() < PROBABILIDAD_REPORTE_VECINAL) {
-            Set<String> conReporte = prioridad.reportesVecinales().keySet();
-            List<Contenedor> sinReporte = todos.stream().filter(c -> !conReporte.contains(c.getId())).toList();
-            if (!sinReporte.isEmpty()) {
-                incidentes.crearReporteVecinal(elegir(sinReporte).getId(), elegir(COMENTARIOS_VECINALES), "Boti", ahora);
-            }
+            sortearReporteVecinal(todos, ahora);
         }
 
         // 4) El sistema decide si manda camiones, y los choferes avanzan en sus rutas
@@ -284,6 +310,62 @@ public class EmuladorDeSensores {
         incidentes.cerrarResueltos(ahora);
         if (paso % PASOS_POR_DIA == 0) {
             lecturas.borrarAnterioresA(ahora.minus(HISTORIAL_GUARDADO));
+        }
+    }
+
+    private void sortearEventoMasivo(List<Contenedor> todos, Instant ahora) {
+        if (azar.nextDouble() >= PROBABILIDAD_EVENTO_MASIVO) {
+            return;
+        }
+        List<Integer> sectores = todos.stream().map(Contenedor::getSectorId).distinct().sorted().toList();
+        int sector = elegir(sectores);
+        if (!mundo.hayEventoEn(sector, ahora)) {
+            mundo.iniciarEvento(sector, ahora, (int) Math.round(entre(3, 5)), FACTOR_EVENTO_MASIVO);
+        }
+    }
+
+    // Las fallas no son para siempre: alguien va y arregla el sensor
+    private void repararSensores(Instant ahora) {
+        reparaEn.entrySet().removeIf(entrada -> {
+            if (entrada.getValue().isAfter(ahora)) {
+                return false;
+            }
+            falla.put(entrada.getKey(), SIN_FALLA);
+            valorTrabado.remove(entrada.getKey());
+            return true;
+        });
+    }
+
+    private void sortearFallaDeSensor(List<Contenedor> todos, Instant ahora) {
+        if (azar.nextDouble() >= PROBABILIDAD_FALLA_SENSOR) {
+            return;
+        }
+        List<Contenedor> sanos = todos.stream()
+                .filter(c -> falla.get(c.getId()).equals(SIN_FALLA) && !c.isAnomalia()).toList();
+        if (!sanos.isEmpty()) {
+            Contenedor elegido = elegir(sanos);
+            romperSensor(elegido, azar.nextBoolean() ? SIN_SENAL : CONGELADO, ahora,
+                    (int) Math.round(entre(6, 30)));
+        }
+    }
+
+    private void romperSensor(Contenedor contenedor, String tipo, Instant ahora, int horas) {
+        falla.put(contenedor.getId(), tipo);
+        valorTrabado.put(contenedor.getId(), contenedor.getLlenado());
+        reparaEn.put(contenedor.getId(), ahora.plus(Duration.ofHours(horas)));
+    }
+
+    // La mayoría de los reportes son sobre contenedores que de verdad están llenos; algunos no
+    private void sortearReporteVecinal(List<Contenedor> todos, Instant ahora) {
+        Set<String> conReporte = prioridad.reportesVecinales().keySet();
+        boolean sinMotivo = azar.nextDouble() < PROBABILIDAD_REPORTE_SIN_MOTIVO;
+        List<Contenedor> candidatos = todos.stream()
+                .filter(c -> !conReporte.contains(c.getId()))
+                .filter(c -> sinMotivo || nivelReal.get(c.getId()) >= 70)
+                .toList();
+        if (!candidatos.isEmpty()) {
+            incidentes.crearReporteVecinal(elegir(candidatos).getId(),
+                    elegir(sinMotivo ? COMENTARIOS_SIN_MOTIVO : COMENTARIOS_VECINALES), "Boti", ahora);
         }
     }
 
@@ -335,16 +417,95 @@ public class EmuladorDeSensores {
                 servicioDeRutas.noSePudo(ruta, parada, elegir(MOTIVOS_NO_SE_PUDO), ahora);
                 break; // el camión queda demorado un paso
             }
+            int antesDeVaciar = contenedor.getLlenado();
             servicioDeRutas.recolectar(ruta, parada, ahora);
+            String id = contenedor.getId();
             int nivel = (int) Math.round(entre(2, 6));
-            nivelReal.put(contenedor.getId(), (double) nivel);
-            revuelvenHasta.remove(contenedor.getId());
-            // Un sensor caído o trabado no se entera de que lo vaciaron
-            if (falla.get(contenedor.getId()).equals(SIN_FALLA)) {
-                trasRecoleccion.add(new LecturaNueva(contenedor.getId(), nivel, ahora.plusSeconds(1)));
+            nivelReal.put(id, (double) nivel);
+            revuelvenHasta.remove(id);
+
+            // A veces el sensor se traba al vaciar el contenedor y sigue marcando lo de antes
+            if (falla.get(id).equals(SIN_FALLA)
+                    && (trabarAlVaciar.remove(id) || azar.nextDouble() < PROBABILIDAD_SENSOR_TRABADO)) {
+                falla.put(id, TRABADO);
+                valorTrabado.put(id, antesDeVaciar);
+                reparaEn.put(id, ahora.plus(Duration.ofMinutes(Math.round(entre(4, 12) * 60))));
+            }
+            // Un sensor sano informa enseguida que lo vaciaron; uno caído o trabado, no
+            if (falla.get(id).equals(SIN_FALLA)) {
+                trasRecoleccion.add(new LecturaNueva(id, nivel, ahora.plusSeconds(1)));
             }
         }
         minutosDelCamion.put(camion.getId(), ruta.proximaParada().isPresent() ? minutos : 0.0);
+    }
+
+    // ---------- Casos que se disparan a pedido para la demo ----------
+
+    /** Rompe el sensor de un contenedor: sin_senal o congelado ahora, trabado en la próxima recolección. */
+    public String fallarSensor(String contenedorId, String tipo, int horas) {
+        return conCaso(contenedorId, contenedor -> {
+            Instant ahora = reloj.ahora();
+            if (tipo.equals(TRABADO)) {
+                trabarAlVaciar.add(contenedorId);
+                return "El sensor de " + contenedorId + " se va a trabar la próxima vez que un camión lo vacíe.";
+            }
+            romperSensor(contenedor, tipo, ahora, horas);
+            return "El sensor de " + contenedorId + " pasó a " + tipo.replace('_', ' ') + " durante " + horas
+                    + " h. El sistema lo detecta a las " + (tipo.equals(SIN_SENAL) ? Parametros.HORAS_SIN_SENAL
+                            : Parametros.HORAS_VALOR_CONGELADO) + " h.";
+        });
+    }
+
+    public String repararSensor(String contenedorId) {
+        return conCaso(contenedorId, contenedor -> {
+            falla.put(contenedorId, SIN_FALLA);
+            reparaEn.remove(contenedorId);
+            valorTrabado.remove(contenedorId);
+            trabarAlVaciar.remove(contenedorId);
+            return "El sensor de " + contenedorId + " vuelve a funcionar desde el próximo paso.";
+        });
+    }
+
+    /** Alguien revuelve la basura: el sensor marca saltos durante 40 minutos. */
+    public String revolver(String contenedorId) {
+        return conCaso(contenedorId, contenedor -> {
+            revuelvenHasta.put(contenedorId, paso + 8);
+            return "Alguien revuelve " + contenedorId + ": el sensor va a marcar saltos durante 40 minutos.";
+        });
+    }
+
+    /** Lleva el nivel real de un contenedor a un valor (por ejemplo, para mostrar un desborde). */
+    public String llenar(String contenedorId, int nivel) {
+        return conCaso(contenedorId, contenedor -> {
+            nivelReal.put(contenedorId, (double) Math.clamp(nivel, 0, 100));
+            return "El contenedor " + contenedorId + " queda al " + nivel + "%; el sensor lo informa en el próximo paso.";
+        });
+    }
+
+    /** Feria, recital o partido: el sector genera más basura durante unas horas. */
+    public String eventoMasivo(int sectorId, int horas) {
+        return conElEmuladorDetenido(() -> {
+            mundo.iniciarEvento(sectorId, reloj.ahora(), horas, FACTOR_EVENTO_MASIVO);
+            return "Evento masivo en el sector " + sectorId + ": genera el triple de basura durante " + horas + " h.";
+        });
+    }
+
+    public String reporteVecinal(String contenedorId, String comentario) {
+        return conCaso(contenedorId, contenedor -> {
+            incidentes.crearReporteVecinal(contenedorId,
+                    comentario == null || comentario.isBlank() ? elegir(COMENTARIOS_VECINALES) : comentario, "Boti",
+                    reloj.ahora());
+            return "Entró un reporte vecinal sobre " + contenedorId + ".";
+        });
+    }
+
+    private String conCaso(String contenedorId, java.util.function.Function<Contenedor, String> accion) {
+        return conElEmuladorDetenido(() -> transaccion.execute(estado -> {
+            Contenedor contenedor = contenedores.findById(contenedorId).orElseThrow(
+                    () -> new RecursoNoEncontradoException("CONTENEDOR_NO_EXISTE",
+                            "No existe el contenedor " + contenedorId + "."));
+            return accion.apply(contenedor);
+        }));
     }
 
     private double entre(double min, double max) {
