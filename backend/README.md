@@ -70,7 +70,9 @@ El emulador solo sabe lo que sabría el mundo real (cuánto se llenó cada conte
 
 La primera vez que arranca, carga 24 horas de lecturas para que las curvas no empiecen vacías, y la hora del sistema arranca a las 17:00, justo antes del pico. La hora simulada se guarda: al reiniciar el servidor, sigue donde estaba.
 
-**Para empezar la demo de cero** hay que recrear la base:
+**Para empezar la demo de cero**, el director llama a `POST /api/v1/simulacion/reiniciar` (también desde Swagger). Borra lecturas, rutas, incidentes y lo aprendido, devuelve contenedores y camiones a su estado inicial y vuelve a cargar el historial de ejemplo. La simulación usa una semilla fija, así que después de reiniciar la demo sale siempre igual.
+
+Si hace falta borrar la base entera (por ejemplo, porque cambió una migración):
 
 ```bash
 dropdb -U ecoruta ecoruta && createdb ecoruta --owner ecoruta   # sin Docker
@@ -102,6 +104,7 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | GET | `/panel/resumen` | Los números del día: recolectados, km evitados, prioritarios, sensores por estado. Filtro: `zonaId` |
 | GET | `/simulacion` | Hora del sistema y si la simulación está en pausa |
 | POST | `/simulacion` | Pausar o acelerar la demo. Body: `enPausa`, `velocidad` (1 a 20) |
+| POST | `/simulacion/reiniciar` | Solo el director. Vuelve la demo al punto de partida |
 
 Para probarlos desde Swagger: llamar a `/auth/login`, copiar el `token` de la respuesta y pegarlo con el botón **Authorize**. Desde la terminal:
 
@@ -132,7 +135,15 @@ Todas tienen un valor por defecto para desarrollo, en `src/main/resources/applic
 ./mvnw test
 ```
 
-Las pruebas que levantan la aplicación completa usan Testcontainers: crean un PostgreSQL temporal en Docker. Si Docker no está, se saltean y el resto corre igual.
+Las pruebas de integración levantan la aplicación completa contra un PostgreSQL de verdad. Usan Docker (Testcontainers) si está; si no, una base local que hay que crear una sola vez:
+
+```bash
+createdb ecoruta_test --owner ecoruta
+```
+
+Esa base se borra y se vuelve a armar en cada corrida: no usar la de la demo. Si no hay Docker ni base de prueba, esas pruebas se saltean y el resto corre igual. La conexión se cambia con `TEST_DB_URL`, `TEST_DB_USER` y `TEST_DB_PASSWORD`.
+
+En las pruebas el emulador no avanza solo: cada prueba lo hace avanzar a mano con `avanzarPasos(n)`, así los resultados no dependen del tiempo.
 
 ## Estructura
 
@@ -149,7 +160,7 @@ src/main/java/ar/edu/uade/ecoruta/
   emulador/     hace de sensores y choferes mientras no haya datos en vivo
   (próximos)    tráfico, aviso al chofer, indicadores
 src/main/resources/
-  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj, V5 patrón de llenado)
+  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj, V5 patrón de llenado, V6 nivel inicial para reiniciar la demo)
 scripts/        generan V2 y V3 a partir de los datos del front
 ```
 

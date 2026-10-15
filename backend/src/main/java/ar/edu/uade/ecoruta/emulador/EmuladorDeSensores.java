@@ -12,6 +12,7 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -96,16 +97,22 @@ public class EmuladorDeSensores {
     private final Map<String, Integer> revuelvenHasta = new HashMap<>(); // paso hasta el que alguien revuelve
     private final Map<String, Double> minutosDelCamion = new HashMap<>();
     private final Map<String, Integer> pasosDeDescarga = new HashMap<>();
-    private final Random azar = new Random(2026);
+    // Semilla fija: después de reiniciar, la demo vuelve a salir igual
+    private static final long SEMILLA = 2026;
+    private Random azar = new Random(SEMILLA);
     private int paso;
     private volatile boolean listo;
     private long proximoPasoMs;
+    private final Object turno = new Object(); // un paso, un reinicio o una carga a la vez
+    private final boolean automatico;
 
     EmuladorDeSensores(RelojDelSistema reloj, ContenedorRepositorio contenedores, CamionRepositorio camiones,
             RutaRepositorio rutas, RepositorioDeLecturas lecturas, ServicioDeLecturas servicioDeLecturas,
             ServicioDeEstadoDeSensores estadoDeSensores, ServicioDeIncidentes incidentes, ServicioDePrioridad prioridad,
             ServicioDeDespacho despacho, ServicioDeRutas servicioDeRutas, HistorialInicial historialInicial,
-            TransactionTemplate transaccion) {
+            TransactionTemplate transaccion,
+            @Value("${ecoruta.emulador.automatico:true}") boolean automatico) {
+        this.automatico = automatico;
         this.reloj = reloj;
         this.contenedores = contenedores;
         this.camiones = camiones;
@@ -123,42 +130,80 @@ public class EmuladorDeSensores {
 
     @EventListener(ApplicationReadyEvent.class)
     void arrancar() {
-        transaccion.executeWithoutResult(estado -> {
-            if (!reloj.esSimulado()) {
-                reloj.fijar(Instant.now().atZone(Fechas.BUENOS_AIRES).toLocalDate().atTime(HORA_INICIAL)
-                        .atZone(Fechas.BUENOS_AIRES).toInstant());
-            }
-            Map<String, String> fallasIniciales = Map.of();
-            if (!lecturas.hayLecturas()) {
-                fallasIniciales = historialInicial.cargar(reloj.ahora(), azar);
-                // El sensor irregular de la demo sigue así unos pasos más antes de normalizarse
-                revuelvenHasta.put(HistorialInicial.SENSOR_IRREGULAR, 6);
-                log.info("Emulador: se cargaron 24 h de lecturas de ejemplo");
-            }
-            for (Contenedor c : contenedores.findByActivoTrueOrderById()) {
-                // Al reiniciar no sabemos el nivel real: se parte de lo que el sistema cree
-                nivelReal.put(c.getId(), (double) (c.getNivelEstimado() != null ? c.getNivelEstimado() : c.getLlenado()));
-                String estadoSensor = c.getEstadoSensor();
-                boolean rota = estadoSensor.equals(ServicioDeEstadoDeSensores.SIN_SENAL)
-                        || estadoSensor.equals(ServicioDeEstadoDeSensores.CONGELADO);
-                falla.put(c.getId(), fallasIniciales.getOrDefault(c.getId(), rota ? estadoSensor : SIN_FALLA));
-            }
-        });
-        listo = true;
+        synchronized (turno) {
+            transaccion.executeWithoutResult(estado -> preparar());
+            listo = true;
+        }
         log.info("Emulador de sensores activo. Hora del sistema: {}", Fechas.enBuenosAires(reloj.ahora()));
+    }
+
+    /**
+     * Arma el estado del emulador. Si la base no tiene lecturas, carga el historial de ejemplo;
+     * si ya tiene, sigue desde donde quedó. Corre dentro de una transacción.
+     */
+    void preparar() {
+        if (!reloj.esSimulado()) {
+            reloj.fijar(Instant.now().atZone(Fechas.BUENOS_AIRES).toLocalDate().atTime(HORA_INICIAL)
+                    .atZone(Fechas.BUENOS_AIRES).toInstant());
+        }
+        Map<String, String> fallasIniciales = Map.of();
+        if (!lecturas.hayLecturas()) {
+            fallasIniciales = historialInicial.cargar(reloj.ahora(), azar);
+            // El sensor irregular de la demo sigue así unos pasos más antes de normalizarse
+            revuelvenHasta.put(HistorialInicial.SENSOR_IRREGULAR, 6);
+            log.info("Emulador: se cargaron 24 h de lecturas de ejemplo");
+        }
+        for (Contenedor c : contenedores.findByActivoTrueOrderById()) {
+            // Al reiniciar no sabemos el nivel real: se parte de lo que el sistema cree
+            nivelReal.put(c.getId(), (double) (c.getNivelEstimado() != null ? c.getNivelEstimado() : c.getLlenado()));
+            String estadoSensor = c.getEstadoSensor();
+            boolean rota = estadoSensor.equals(ServicioDeEstadoDeSensores.SIN_SENAL)
+                    || estadoSensor.equals(ServicioDeEstadoDeSensores.CONGELADO);
+            falla.put(c.getId(), fallasIniciales.getOrDefault(c.getId(), rota ? estadoSensor : SIN_FALLA));
+        }
+    }
+
+    /** Olvida todo lo que sabía el emulador. Lo usa el reinicio de la demo, que después llama a preparar(). */
+    void olvidar() {
+        nivelReal.clear();
+        falla.clear();
+        revuelvenHasta.clear();
+        minutosDelCamion.clear();
+        pasosDeDescarga.clear();
+        azar = new Random(SEMILLA);
+        paso = 0;
+        proximoPasoMs = 0;
+    }
+
+    /** Para hacer algo con el emulador detenido (reiniciar la demo, por ejemplo). */
+    <T> T conElEmuladorDetenido(java.util.function.Supplier<T> accion) {
+        synchronized (turno) {
+            return accion.get();
+        }
+    }
+
+    /** Avanza a mano varios pasos, cada uno en su transacción. Lo usan las pruebas. */
+    public void avanzarPasos(int cuantos) {
+        synchronized (turno) {
+            for (int i = 0; i < cuantos; i++) {
+                transaccion.executeWithoutResult(estado -> avanzar());
+            }
+        }
     }
 
     // Revisa seguido si ya toca el próximo paso; así la velocidad se puede cambiar en caliente.
     @Scheduled(fixedDelay = 200)
     void latido() {
-        if (!listo || reloj.enPausa() || System.currentTimeMillis() < proximoPasoMs) {
+        if (!automatico || !listo || reloj.enPausa() || System.currentTimeMillis() < proximoPasoMs) {
             return;
         }
-        proximoPasoMs = System.currentTimeMillis() + MS_REALES_POR_PASO / reloj.velocidad();
-        try {
-            transaccion.executeWithoutResult(estado -> avanzar());
-        } catch (RuntimeException ex) {
-            log.error("El emulador no pudo completar el paso {}", paso, ex);
+        synchronized (turno) {
+            proximoPasoMs = System.currentTimeMillis() + MS_REALES_POR_PASO / reloj.velocidad();
+            try {
+                transaccion.executeWithoutResult(estado -> avanzar());
+            } catch (RuntimeException ex) {
+                log.error("El emulador no pudo completar el paso {}", paso, ex);
+            }
         }
     }
 

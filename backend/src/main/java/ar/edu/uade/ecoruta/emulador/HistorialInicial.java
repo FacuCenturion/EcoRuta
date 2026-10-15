@@ -128,13 +128,14 @@ class HistorialInicial {
         return fallas;
     }
 
-    // El sensor falló entre 3 y 20 horas atrás: uno sin señal no mandó nada más desde
-    // entonces, y uno congelado siguió mandando siempre el mismo valor.
+    // El sensor falló entre 5 y 20 horas atrás: uno sin señal no mandó nada más desde
+    // entonces, y uno congelado siguió mandando siempre el mismo valor. Al menos 5 horas para
+    // que al arrancar la demo ya se puedan detectar: un congelado recién se reconoce a las 4 h.
     private static List<Punto> aplicarFalla(List<Punto> curva, String falla, Instant ahora, Random azar) {
         if (falla == null) {
             return curva;
         }
-        Instant corte = ahora.minus(Duration.ofMinutes(Math.round((3 + azar.nextDouble() * 17) * 60)));
+        Instant corte = ahora.minus(Duration.ofMinutes(Math.round((5 + azar.nextDouble() * 15) * 60)));
         List<Punto> anteriores = curva.stream().filter(p -> !p.momento().isAfter(corte)).toList();
         if (falla.equals(ServicioDeEstadoDeSensores.SIN_SENAL)) {
             return anteriores;

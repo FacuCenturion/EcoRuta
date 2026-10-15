@@ -3,29 +3,15 @@ package ar.edu.uade.ecoruta;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.testcontainers.DockerClientFactory;
 
-/**
- * Levanta la aplicación completa contra un PostgreSQL de verdad (Testcontainers)
- * y comprueba que las migraciones cargan los datos de ejemplo.
- * Necesita Docker: si no está, estas pruebas se saltean.
- */
-@Import(TestcontainersConfiguration.class)
-@SpringBootTest(properties = "ecoruta.emulador.activo=false")
-@EnabledIf("dockerDisponible")
+/** Las migraciones cargan los datos de ejemplo y la aplicación arranca contra PostgreSQL. */
+@BaseDePrueba
 class EcorutaBackendApplicationTests {
 
     @Autowired
     JdbcTemplate jdbc;
-
-    static boolean dockerDisponible() {
-        return DockerClientFactory.instance().isDockerAvailable();
-    }
 
     @Test
     void lasMigracionesCarganLosDatosDeEjemplo() {
@@ -41,6 +27,12 @@ class EcorutaBackendApplicationTests {
                 "SELECT count(*) FROM camion c LEFT JOIN usuario u ON u.id = c.chofer_id "
                         + "WHERE u.rol IS DISTINCT FROM 'chofer'", Integer.class);
         assertThat(sinChofer).isZero();
+    }
+
+    @Test
+    void cadaContenedorTieneSuNivelInicial() {
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM contenedor WHERE llenado_inicial IS NULL", Integer.class))
+                .isZero();
     }
 
     private int contar(String tabla) {

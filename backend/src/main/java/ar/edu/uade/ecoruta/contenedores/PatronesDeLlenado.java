@@ -83,6 +83,12 @@ public class PatronesDeLlenado {
         };
     }
 
+    /** Olvida lo aprendido (después de reiniciar la demo, cuando la tabla quedó vacía). */
+    public void olvidar() {
+        porContenedor = Map.of();
+        ultimoCalculo = null;
+    }
+
     /** Cuántos contenedores ya tienen un patrón propio. */
     public int cantidadConPatron() {
         return porContenedor.size();

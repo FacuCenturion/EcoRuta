@@ -22,6 +22,11 @@ public class RelojDelSistema {
 
     public RelojDelSistema(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
+        recargar();
+    }
+
+    /** Vuelve a leer la hora y los controles guardados (después de reiniciar la demo). */
+    public void recargar() {
         jdbc.query("SELECT reloj_at, en_pausa, velocidad FROM estado_sistema WHERE id = 1", fila -> {
             OffsetDateTime guardado = fila.getObject("reloj_at", OffsetDateTime.class);
             simulado = guardado == null ? null : guardado.toInstant();

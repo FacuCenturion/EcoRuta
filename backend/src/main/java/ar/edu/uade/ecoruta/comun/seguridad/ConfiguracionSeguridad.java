@@ -67,6 +67,8 @@ public class ConfiguracionSeguridad {
                         .requestMatchers("/api/v1/auth/me").authenticated()
                         // Los sensores no tienen usuario: el controlador valida el header X-Api-Key
                         .requestMatchers(HttpMethod.POST, "/api/v1/lecturas").permitAll()
+                        // Reiniciar la demo borra lo que pasó: solo el director
+                        .requestMatchers(HttpMethod.POST, "/api/v1/simulacion/reiniciar").hasRole("DIRECTOR")
                         // Todo lo demás es del panel. Los endpoints del chofer se agregan
                         // arriba de esta línea cuando existan.
                         .requestMatchers("/api/v1/**").hasAnyRole("DIRECTOR", "OPERADOR")
