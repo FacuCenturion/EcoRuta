@@ -9,8 +9,16 @@ public interface CamionRepositorio extends JpaRepository<Camion, String> {
 
     // El chofer se trae en la misma consulta para no hacer una por camión
     @EntityGraph(attributePaths = "chofer")
-    List<Camion> findAllByOrderByZonaId();
+    List<Camion> findAllByOrderBySectorId();
+
+    /** Igual que {@link #findAllByOrderBySectorId()}: se mantiene el nombre que ya usa el resto del código. */
+    default List<Camion> findAllByOrderByZonaId() {
+        return findAllByOrderBySectorId();
+    }
 
     @EntityGraph(attributePaths = "chofer")
     List<Camion> findByZonaId(int zonaId);
+
+    @EntityGraph(attributePaths = "chofer")
+    List<Camion> findBySectorId(int sectorId);
 }

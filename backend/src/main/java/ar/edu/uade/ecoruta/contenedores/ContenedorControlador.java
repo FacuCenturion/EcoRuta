@@ -40,14 +40,16 @@ public class ContenedorControlador {
     }
 
     @GetMapping
-    List<ContenedorDto> listar(@RequestParam(required = false) Integer zonaId) {
-        return aDto(buscarPorZona(zonaId));
+    List<ContenedorDto> listar(@RequestParam(required = false) Integer zonaId,
+            @RequestParam(required = false) Integer sectorId) {
+        return aDto(buscar(zonaId, sectorId));
     }
 
     /** Los que hay que ir a buscar, del más lleno al menos lleno. */
     @GetMapping("/prioritarios")
-    List<ContenedorDto> prioritarios(@RequestParam(required = false) Integer zonaId) {
-        List<Contenedor> lista = buscarPorZona(zonaId);
+    List<ContenedorDto> prioritarios(@RequestParam(required = false) Integer zonaId,
+            @RequestParam(required = false) Integer sectorId) {
+        List<Contenedor> lista = buscar(zonaId, sectorId);
         Map<String, Evaluacion> evaluaciones = prioridad.evaluar(lista, reloj.ahora());
         Map<String, Long> reportes = prioridad.reportesVecinales();
         return lista.stream()
@@ -72,7 +74,10 @@ public class ContenedorControlador {
                 .toList();
     }
 
-    private List<Contenedor> buscarPorZona(Integer zonaId) {
+    private List<Contenedor> buscar(Integer zonaId, Integer sectorId) {
+        if (sectorId != null) {
+            return contenedores.findBySectorIdAndActivoTrueOrderById(sectorId);
+        }
         return zonaId == null
                 ? contenedores.findByActivoTrueOrderById()
                 : contenedores.findByZonaIdAndActivoTrueOrderById(zonaId);

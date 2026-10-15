@@ -34,6 +34,9 @@ public class Camion {
     @Column(name = "zona_id")
     private int zonaId;
 
+    @Column(name = "sector_id")
+    private int sectorId;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chofer_id")
     private Usuario chofer;
@@ -106,6 +109,10 @@ public class Camion {
 
     public int getZonaId() {
         return zonaId;
+    }
+
+    public int getSectorId() {
+        return sectorId;
     }
 
     public Usuario getChofer() {

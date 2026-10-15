@@ -42,6 +42,23 @@ Al arrancar, Flyway crea las tablas y carga los datos de ejemplo. La API queda e
 | Operador | `operador` | `operador123` |
 | Chofer (uno por camión) | `chofer22`, `chofer31`, `chofer14`, `chofer17`, `chofer5`, `chofer26`, `chofer12` | `chofer123` |
 
+### Con qué datos trabaja
+
+El sistema trabaja con **una sola zona, la 1 (Comuna 1)**, con **180 contenedores reales** y **4 camiones**, uno por sector:
+
+| Sector | Barrios | Contenedores | Camión |
+| --- | --- | --- | --- |
+| 1 | Retiro y San Nicolás | 55 | C22 |
+| 2 | Monserrat | 40 | C31 |
+| 3 | San Telmo y Puerto Madero | 45 | C14 |
+| 4 | Constitución | 40 | C17 |
+
+Las ubicaciones salen de la planilla oficial "Ubicación contenedores RSU - fracción húmedos" (marzo 2025), que la Ciudad entregó adjunta a la [nota NO-2025-19872282-GCABA-DGLIM](https://buenosaires.gob.ar/sites/default/files/2025-07/NO-2025-19872282-GCABA-DGLIM.pdf) en respuesta a un pedido de acceso a la información. Cada dirección se convirtió en coordenadas con el normalizador oficial de la Ciudad (USIG), que la ubica sobre la calle. Se tomó una muestra al azar por barrio, porque los 2.253 contenedores de la Comuna 1 harían el emulador demasiado pesado. La misma Ciudad aclara que la planilla puede no coincidir del todo con la vía pública.
+
+Para regenerar la muestra: `pip install openpyxl pypdf` y `python backend/scripts/importar_contenedores.py`. Deja la muestra en `backend/scripts/datos/contenedores_zona1.csv` y arma la migración. Si la muestra cambia, va en una migración nueva.
+
+Cada contenedor tiene su tipo: lateral (3.200 litros), bilateral (1.100 litros) o soterrado. Uno chico se llena antes. Las otras 6 zonas siguen en la base para dibujar el mapa, sin contenedores ni camiones.
+
 ### Qué hace hoy
 
 Como todavía no hay sensores en vivo, el backend trae un **emulador**: cada 4 segundos reales pasan 5 minutos simulados, los contenedores se llenan, los sensores mandan su nivel y los camiones recorren sus rutas. Con esos datos el sistema hace lo mismo que haría con datos reales:
@@ -50,7 +67,7 @@ Como todavía no hay sensores en vivo, el backend trae un **emulador**: cada 4 s
 - con ese patrón pronostica a qué hora va a desbordar cada uno;
 - calcula qué contenedores son prioritarios (ver abajo);
 - detecta lecturas irregulares y sensores sin señal o congelados, y les estima el nivel;
-- despacha un camión cuando una zona tiene 3 o más contenedores prioritarios o uno desbordado;
+- despacha el camión de un sector cuando ese sector tiene 3 o más contenedores prioritarios o uno desbordado;
 - abre incidentes y los cierra solos cuando se resuelven.
 
 Un contenedor es prioritario por uno de estos motivos, en este orden:
@@ -88,7 +105,8 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | POST | `/auth/login` | Público. Devuelve el token y los datos del usuario |
 | GET | `/auth/me` | El usuario del token (cualquier rol) |
 | GET | `/zonas` | Las 7 zonas con empresa, comunas, color, centro y base |
-| GET | `/contenedores` | Contenedores con llenado, nivel, motivo de prioridad, estado del sensor y hora estimada de desborde. Filtro: `zonaId` |
+| GET | `/sectores` | Los 4 sectores de la zona 1, con sus barrios, su camión y cuántos contenedores tiene |
+| GET | `/contenedores` | Contenedores con dirección, barrio, tipo, llenado, nivel, motivo de prioridad, estado del sensor y hora estimada de desborde. Filtros: `zonaId`, `sectorId` |
 | GET | `/contenedores/prioritarios` | Los que hay que ir a buscar, del más lleno al menos lleno. Filtro: `zonaId` |
 | GET | `/contenedores/{id}` | Un contenedor |
 | GET | `/contenedores/{id}/lecturas` | Lecturas del sensor para dibujar la curva. Parámetro: `horas` (24 por defecto) |
@@ -96,7 +114,7 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | GET | `/camiones` | Camiones con chofer, estado, posición y las paradas de su ruta. Filtro: `zonaId` |
 | GET | `/rutas` | Rutas del día. Filtros: `zonaId`, `estado` |
 | GET | `/rutas/{id}` | Una ruta con sus paradas |
-| POST | `/rutas/planificar` | Despacho manual: manda ahora el camión de una zona. Body: `zonaId` |
+| POST | `/rutas/planificar` | Despacho manual: manda ahora el camión de un sector. Body: `sectorId` |
 | GET | `/incidentes` | Incidentes. Filtros: `zonaId`, `tipo`, `estado` |
 | POST | `/incidentes/{id}/decision` | El operador confirma o descarta. Body: `decision` |
 | GET | `/reportes-vecinales` | Los incidentes que vienen de vecinos. Filtros: `zonaId`, `estado` |
@@ -151,7 +169,7 @@ En las pruebas el emulador no avanza solo: cada prueba lo hace avanzar a mano co
 src/main/java/ar/edu/uade/ecoruta/
   comun/        errores, seguridad y Swagger, compartidos por todos los módulos
   auth/         login, token y usuarios
-  zonas/  camiones/  incidentes/
+  zonas/  sectores/  camiones/  incidentes/
                 un paquete por módulo, cada uno con su entidad, repositorio, DTO y controlador
   contenedores/ además tiene el patrón de llenado aprendido, el pronóstico y la regla de prioridad
   sensores/     entrada de lecturas, detección de anomalías y estado de cada sensor
@@ -160,8 +178,8 @@ src/main/java/ar/edu/uade/ecoruta/
   emulador/     hace de sensores y choferes mientras no haya datos en vivo
   (próximos)    tráfico, aviso al chofer, indicadores
 src/main/resources/
-  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj, V5 patrón de llenado, V6 nivel inicial para reiniciar la demo)
-scripts/        generan V2 y V3 a partir de los datos del front
+  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj, V5 patrón de llenado, V6 nivel inicial para reiniciar la demo, V7 contenedores reales de la zona 1)
+scripts/        importar_contenedores.py arma V7 con los contenedores reales; los otros generaron V2 y V3
 ```
 
 ## Reglas para no pisarse

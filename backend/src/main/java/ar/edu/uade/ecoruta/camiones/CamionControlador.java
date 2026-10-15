@@ -26,8 +26,10 @@ public class CamionControlador {
     }
 
     @GetMapping
-    List<CamionDto> listar(@RequestParam(required = false) Integer zonaId) {
-        List<Camion> lista = zonaId == null ? camiones.findAllByOrderByZonaId() : camiones.findByZonaId(zonaId);
+    List<CamionDto> listar(@RequestParam(required = false) Integer zonaId,
+            @RequestParam(required = false) Integer sectorId) {
+        List<Camion> lista = sectorId != null ? camiones.findBySectorId(sectorId)
+                : zonaId != null ? camiones.findByZonaId(zonaId) : camiones.findAllByOrderByZonaId();
         Map<String, Ruta> rutaPorCamion = rutas.ultimaDeCadaCamion().stream()
                 .collect(Collectors.toMap(r -> r.getCamion().getId(), Function.identity()));
         return lista.stream().map(c -> CamionDto.de(c, rutaPorCamion.get(c.getId()))).toList();

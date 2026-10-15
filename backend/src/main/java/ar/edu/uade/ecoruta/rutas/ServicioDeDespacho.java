@@ -25,6 +25,8 @@ import ar.edu.uade.ecoruta.rutas.PlanificadorDeRutas.Punto;
 import ar.edu.uade.ecoruta.rutas.PlanificadorDeRutas.RutaPlanificada;
 import ar.edu.uade.ecoruta.rutas.SeleccionDeParadas.Eleccion;
 import ar.edu.uade.ecoruta.rutas.SeleccionDeParadas.Opcion;
+import ar.edu.uade.ecoruta.sectores.Sector;
+import ar.edu.uade.ecoruta.sectores.SectorRepositorio;
 import ar.edu.uade.ecoruta.zonas.Zona;
 import ar.edu.uade.ecoruta.zonas.ZonaRepositorio;
 
@@ -40,9 +42,11 @@ public class ServicioDeDespacho {
     private final ZonaRepositorio zonas;
     private final RutaRepositorio rutas;
     private final ServicioDePrioridad prioridad;
+    private final SectorRepositorio sectores;
 
     ServicioDeDespacho(CamionRepositorio camiones, ContenedorRepositorio contenedores, ZonaRepositorio zonas,
-            RutaRepositorio rutas, ServicioDePrioridad prioridad) {
+            RutaRepositorio rutas, ServicioDePrioridad prioridad, SectorRepositorio sectores) {
+        this.sectores = sectores;
         this.camiones = camiones;
         this.contenedores = contenedores;
         this.zonas = zonas;
@@ -51,7 +55,7 @@ public class ServicioDeDespacho {
     }
 
     /**
-     * Revisa cada zona con el camión libre y le arma una ruta si hay al menos 3 contenedores
+     * Revisa cada sector con el camión libre y le arma una ruta si hay al menos 3 contenedores
      * prioritarios o alguno ya desbordado. Devuelve las rutas creadas.
      */
     @Transactional
@@ -62,7 +66,7 @@ public class ServicioDeDespacho {
         return camiones.findAllByOrderByZonaId().stream()
                 .filter(camion -> camion.getEstado().equals(Camion.EN_BASE) && !ocupados.contains(camion.getId()))
                 .map(camion -> {
-                    List<Contenedor> deLaZona = contenedores.findByZonaIdAndActivoTrueOrderById(camion.getZonaId());
+                    List<Contenedor> deLaZona = contenedores.findBySectorIdAndActivoTrueOrderById(camion.getSectorId());
                     Map<String, Evaluacion> evaluaciones = prioridad.evaluar(deLaZona, ahora);
                     long prioritarios = evaluaciones.values().stream().filter(Evaluacion::esPrioritario).count();
                     boolean hayDesbordado = evaluaciones.values().stream()
@@ -76,25 +80,26 @@ public class ServicioDeDespacho {
                 .toList();
     }
 
-    /** El operador manda el camión de una zona ahora, aunque no se llegue al mínimo de paradas. */
+    /** El operador manda ahora el camión de un sector, aunque no se llegue al mínimo de paradas. */
     @Transactional
-    public Ruta despacharManual(int zonaId, Instant ahora) {
-        Zona zona = zonas.findById(zonaId).orElseThrow(
-                () -> new RecursoNoEncontradoException("ZONA_NO_EXISTE", "No existe la zona " + zonaId + "."));
+    public Ruta despacharManual(int sectorId, Instant ahora) {
+        Sector sector = sectores.findById(sectorId).orElseThrow(
+                () -> new RecursoNoEncontradoException("SECTOR_NO_EXISTE", "No existe el sector " + sectorId + "."));
         Set<String> ocupados = camionesConRutaActiva();
-        Camion camion = camiones.findByZonaId(zonaId).stream()
+        Camion camion = camiones.findBySectorId(sectorId).stream()
                 .filter(c -> c.getEstado().equals(Camion.EN_BASE) && !ocupados.contains(c.getId()))
                 .findFirst()
                 .orElseThrow(() -> new EstadoInvalidoException("CAMION_OCUPADO",
-                        "El camión de la zona " + zonaId + " ya tiene una ruta o todavía no volvió a la base."));
+                        "El camión de " + sector.getNombre() + " ya tiene una ruta o todavía no volvió a la base."));
 
-        List<Contenedor> deLaZona = contenedores.findByZonaIdAndActivoTrueOrderById(zonaId);
-        Map<String, Evaluacion> evaluaciones = prioridad.evaluar(deLaZona, ahora);
+        List<Contenedor> delSector = contenedores.findBySectorIdAndActivoTrueOrderById(sectorId);
+        Map<String, Evaluacion> evaluaciones = prioridad.evaluar(delSector, ahora);
         if (evaluaciones.values().stream().noneMatch(Evaluacion::esPrioritario)) {
             throw new EstadoInvalidoException("SIN_CONTENEDORES_PRIORITARIOS",
-                    "En la zona " + zonaId + " no hay contenedores para recolectar ahora.");
+                    "En " + sector.getNombre() + " no hay contenedores para recolectar ahora.");
         }
-        return crear(camion, zona, deLaZona, evaluaciones, Ruta.MANUAL, ahora);
+        Zona zona = zonas.findById(sector.getZonaId()).orElseThrow();
+        return crear(camion, zona, delSector, evaluaciones, Ruta.MANUAL, ahora);
     }
 
     private Set<String> camionesConRutaActiva() {

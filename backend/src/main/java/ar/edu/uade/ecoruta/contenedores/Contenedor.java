@@ -20,11 +20,19 @@ import ar.edu.uade.ecoruta.comun.Fechas;
 public class Contenedor {
 
     @Id
-    private String id; // por ejemplo Z2-04
+    private String id; // por ejemplo SNI-05 (prefijo del barrio)
     private String direccion;
 
     @Column(name = "zona_id")
     private int zonaId;
+
+    @Column(name = "sector_id")
+    private int sectorId;
+    private String barrio;
+    private String tipo; // lateral, bilateral o soterrado
+
+    @Column(name = "capacidad_litros")
+    private int capacidadLitros;
     private double lat;
     private double lng;
 
@@ -93,6 +101,22 @@ public class Contenedor {
 
     public int getZonaId() {
         return zonaId;
+    }
+
+    public int getSectorId() {
+        return sectorId;
+    }
+
+    public String getBarrio() {
+        return barrio;
+    }
+
+    public String getTipo() {
+        return tipo;
+    }
+
+    public int getCapacidadLitros() {
+        return capacidadLitros;
     }
 
     public int getLlenado() {

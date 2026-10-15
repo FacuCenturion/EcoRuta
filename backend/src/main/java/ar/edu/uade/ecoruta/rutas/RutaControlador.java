@@ -24,7 +24,7 @@ import ar.edu.uade.ecoruta.comun.error.RecursoNoEncontradoException;
 @RequestMapping("/api/v1/rutas")
 public class RutaControlador {
 
-    public record PedidoDespacho(@NotNull Integer zonaId) {
+    public record PedidoDespacho(@NotNull Integer sectorId) {
     }
 
     private final RutaRepositorio rutas;
@@ -40,9 +40,9 @@ public class RutaControlador {
     /** Rutas del día (según la hora del sistema), de la más nueva a la más vieja. */
     @GetMapping
     public List<RutaDto> listar(@RequestParam(required = false) Integer zonaId,
-            @RequestParam(required = false) String estado) {
+            @RequestParam(required = false) Integer sectorId, @RequestParam(required = false) String estado) {
         var desde = Fechas.paraLaBase(Fechas.inicioDelDia(reloj.ahora()));
-        return rutas.buscar(desde, zonaId, estado).stream().map(RutaDto::de).toList();
+        return rutas.buscar(desde, zonaId, sectorId, estado).stream().map(RutaDto::de).toList();
     }
 
     @GetMapping("/{id}")
@@ -51,11 +51,11 @@ public class RutaControlador {
                 () -> new RecursoNoEncontradoException("RUTA_NO_EXISTE", "No existe la ruta " + id + "."));
     }
 
-    /** Despacho manual: el operador manda ahora el camión de una zona. */
+    /** Despacho manual: el operador manda ahora el camión de un sector. */
     @PostMapping("/planificar")
     @ResponseStatus(HttpStatus.CREATED)
     @Transactional
     public RutaDto despachar(@Valid @RequestBody PedidoDespacho pedido) {
-        return RutaDto.de(despacho.despacharManual(pedido.zonaId(), reloj.ahora()));
+        return RutaDto.de(despacho.despacharManual(pedido.sectorId(), reloj.ahora()));
     }
 }

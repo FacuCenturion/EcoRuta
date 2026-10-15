@@ -37,7 +37,7 @@ class EmuladorTests {
     @Test
     void alArrancarCargaElHistorialDeEjemplo() {
         // 24 h de lecturas cada 5 minutos para cada sensor, menos lo que no mandaron los que fallan
-        assertThat(contar("SELECT count(*) FROM lectura_sensor")).isBetween(30_000, 126 * 289);
+        assertThat(contar("SELECT count(*) FROM lectura_sensor")).isBetween(40_000, 180 * 289);
         assertThat(contar("SELECT count(*) FROM contenedor WHERE estado_sensor = 'sin_senal'")).isEqualTo(6);
         assertThat(contar("SELECT count(*) FROM contenedor WHERE estado_sensor = 'congelado'")).isEqualTo(3);
         assertThat(contar("SELECT count(*) FROM contenedor WHERE estado_sensor = 'irregular'")).isEqualTo(1);
@@ -56,7 +56,7 @@ class EmuladorTests {
         assertThat(Duration.between(antes, reloj.ahora())).isEqualTo(Duration.ofMinutes(5));
         // Mandan todos menos los 6 sin señal (los congelados mandan, repitiendo el valor).
         // Puede sumarse alguna lectura de un contenedor recién vaciado.
-        assertThat(contar("SELECT count(*) FROM lectura_sensor") - lecturasAntes).isBetween(120, 134);
+        assertThat(contar("SELECT count(*) FROM lectura_sensor") - lecturasAntes).isBetween(174, 188);
     }
 
     @Test

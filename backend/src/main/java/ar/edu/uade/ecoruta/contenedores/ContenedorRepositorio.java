@@ -9,4 +9,6 @@ public interface ContenedorRepositorio extends JpaRepository<Contenedor, String>
     List<Contenedor> findByActivoTrueOrderById();
 
     List<Contenedor> findByZonaIdAndActivoTrueOrderById(int zonaId);
+
+    List<Contenedor> findBySectorIdAndActivoTrueOrderById(int sectorId);
 }

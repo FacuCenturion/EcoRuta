@@ -16,9 +16,10 @@ class EcorutaBackendApplicationTests {
     @Test
     void lasMigracionesCarganLosDatosDeEjemplo() {
         assertThat(contar("zona")).isEqualTo(7);
-        assertThat(contar("contenedor")).isEqualTo(126);
-        assertThat(contar("camion")).isEqualTo(7);
-        assertThat(contar("usuario")).isEqualTo(9);
+        assertThat(contar("sector")).isEqualTo(4);
+        assertThat(contar("contenedor")).isEqualTo(180);
+        assertThat(contar("camion")).isEqualTo(4);
+        assertThat(contar("usuario")).isEqualTo(6); // director, operador y un chofer por camión
     }
 
     @Test
@@ -27,6 +28,15 @@ class EcorutaBackendApplicationTests {
                 "SELECT count(*) FROM camion c LEFT JOIN usuario u ON u.id = c.chofer_id "
                         + "WHERE u.rol IS DISTINCT FROM 'chofer'", Integer.class);
         assertThat(sinChofer).isZero();
+    }
+
+    @Test
+    void elSistemaTrabajaSoloConLaZona1ConUnCamionPorSector() {
+        assertThat(contar("contenedor WHERE zona_id <> 1")).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(DISTINCT sector_id) FROM camion", Integer.class)).isEqualTo(4);
+        // Todos los contenedores reales quedaron dentro de la Comuna 1
+        assertThat(contar("contenedor WHERE lat NOT BETWEEN -34.64 AND -34.58 OR lng NOT BETWEEN -58.40 AND -58.35"))
+                .isZero();
     }
 
     @Test

@@ -5,7 +5,7 @@ import java.util.List;
 
 import ar.edu.uade.ecoruta.comun.Fechas;
 
-public record RutaDto(long id, String camionId, int camionNumero, int zonaId, String estado, String origen,
+public record RutaDto(long id, String camionId, int camionNumero, int zonaId, int sectorId, String estado, String origen,
         OffsetDateTime creada, OffsetDateTime salidaProgramada, OffsetDateTime salidaReal, double kmPlanificados,
         double kmRutaFija, int duracionEstimadaMin, List<ParadaDto> paradas) {
 
@@ -27,6 +27,7 @@ public record RutaDto(long id, String camionId, int camionNumero, int zonaId, St
 
     public static RutaDto de(Ruta r) {
         return new RutaDto(r.getId(), r.getCamion().getId(), r.getCamion().getNumero(), r.getCamion().getZonaId(),
+                r.getCamion().getSectorId(),
                 r.getEstado(), r.getOrigen(), Fechas.enBuenosAires(r.getCreadaAt()),
                 Fechas.enBuenosAires(r.getSalidaProgramada()), Fechas.enBuenosAires(r.getSalidaReal()),
                 r.getKmPlanificados().doubleValue(), r.getKmRutaFija().doubleValue(), r.getDuracionEstimadaMin(),

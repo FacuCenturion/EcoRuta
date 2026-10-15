@@ -14,13 +14,15 @@ import ar.edu.uade.ecoruta.contenedores.Prioridad.Evaluacion;
  * @param nivelEstimado  solo viene cuando el sensor está sin señal o congelado
  * @param desbordeEstimado a qué hora se pronostica que desborda; vacío si no es en las próximas 48 h
  */
-public record ContenedorDto(String id, String direccion, int zonaId, Coordenada posicion, double velocidad,
+public record ContenedorDto(String id, String direccion, String barrio, int zonaId, int sectorId, String tipo,
+        int capacidadLitros, Coordenada posicion, double velocidad,
         int llenado, String nivel, String motivo, boolean anomalia, String estadoSensor, Integer nivelEstimado,
         long reportesVecinales, OffsetDateTime ultimaLectura, OffsetDateTime ultimaRecoleccion,
         OffsetDateTime desbordeEstimado) {
 
     static ContenedorDto de(Contenedor c, Evaluacion evaluacion, long reportesVecinales) {
-        return new ContenedorDto(c.getId(), c.getDireccion(), c.getZonaId(), c.posicion(), c.velocidad(),
+        return new ContenedorDto(c.getId(), c.getDireccion(), c.getBarrio(), c.getZonaId(), c.getSectorId(), c.getTipo(),
+                c.getCapacidadLitros(), c.posicion(), c.velocidad(),
                 c.getLlenado(), evaluacion.nivel(), evaluacion.motivo(), c.isAnomalia(), c.getEstadoSensor(),
                 c.getNivelEstimado(), reportesVecinales, Fechas.enBuenosAires(c.getUltimaLecturaAt()),
                 Fechas.enBuenosAires(c.getUltimaRecoleccionAt()), Fechas.enBuenosAires(evaluacion.desbordeEstimado()));

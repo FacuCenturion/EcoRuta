@@ -44,9 +44,19 @@ class SimulacionControladorTests {
         mvc.perform(get("/api/v1/zonas").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(7));
-        mvc.perform(get("/api/v1/contenedores?zonaId=2").header("Authorization", "Bearer " + token))
+        mvc.perform(get("/api/v1/contenedores?zonaId=1").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(18));
+                .andExpect(jsonPath("$.length()").value(180));
+        mvc.perform(get("/api/v1/contenedores?sectorId=1").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(55))
+                .andExpect(jsonPath("$[0].barrio").exists())
+                .andExpect(jsonPath("$[0].tipo").exists());
+        mvc.perform(get("/api/v1/sectores").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(4))
+                .andExpect(jsonPath("$[0].nombre").value("Retiro y San Nicolás"))
+                .andExpect(jsonPath("$[0].camionId").value("C22"));
     }
 
     @Test

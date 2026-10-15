@@ -51,8 +51,9 @@ public class IncidenteControlador {
 
     @GetMapping("/incidentes")
     public List<IncidenteDto> listar(@RequestParam(required = false) Integer zonaId,
-            @RequestParam(required = false) String tipo, @RequestParam(required = false) String estado) {
-        return incidentes.buscar(zonaId, tipo, estado).stream().map(IncidenteDto::de).toList();
+            @RequestParam(required = false) Integer sectorId, @RequestParam(required = false) String tipo,
+            @RequestParam(required = false) String estado) {
+        return incidentes.buscar(zonaId, sectorId, tipo, estado).stream().map(IncidenteDto::de).toList();
     }
 
     /** El operador confirma o descarta. Queda guardado quién lo decidió y cuándo. */
@@ -67,8 +68,9 @@ public class IncidenteControlador {
 
     @GetMapping("/reportes-vecinales")
     public List<IncidenteDto> reportesVecinales(@RequestParam(required = false) Integer zonaId,
-            @RequestParam(required = false) String estado) {
-        return incidentes.buscar(zonaId, Incidente.REPORTE_VECINAL, estado).stream().map(IncidenteDto::de).toList();
+            @RequestParam(required = false) Integer sectorId, @RequestParam(required = false) String estado) {
+        return incidentes.buscar(zonaId, sectorId, Incidente.REPORTE_VECINAL, estado).stream().map(IncidenteDto::de)
+                .toList();
     }
 
     /** Carga un reporte de un vecino. Hoy lo usa el formulario del panel; más adelante, Boti. */

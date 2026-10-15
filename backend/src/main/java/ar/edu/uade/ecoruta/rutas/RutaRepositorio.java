@@ -24,11 +24,12 @@ public interface RutaRepositorio extends JpaRepository<Ruta, Long> {
             JOIN FETCH r.camion k LEFT JOIN FETCH r.paradas p LEFT JOIN FETCH p.contenedor
             WHERE r.creadaAt >= :desde
               AND (:zonaId IS NULL OR k.zonaId = :zonaId)
+              AND (:sectorId IS NULL OR k.sectorId = :sectorId)
               AND (:estado IS NULL OR r.estado = :estado)
             ORDER BY r.creadaAt DESC
             """)
     List<Ruta> buscar(@Param("desde") OffsetDateTime desde, @Param("zonaId") Integer zonaId,
-            @Param("estado") String estado);
+            @Param("sectorId") Integer sectorId, @Param("estado") String estado);
 
     @Query("""
             SELECT DISTINCT r FROM Ruta r

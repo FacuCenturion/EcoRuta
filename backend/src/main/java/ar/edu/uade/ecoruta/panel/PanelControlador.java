@@ -46,11 +46,13 @@ public class PanelControlador {
     }
 
     @GetMapping("/resumen")
-    public Resumen resumen(@RequestParam(required = false) Integer zonaId) {
+    public Resumen resumen(@RequestParam(required = false) Integer zonaId,
+            @RequestParam(required = false) Integer sectorId) {
         Instant ahora = reloj.ahora();
         MapSqlParameterSource datos = new MapSqlParameterSource()
                 .addValue("desde", Fechas.paraLaBase(Fechas.inicioDelDia(ahora)))
-                .addValue("zona", zonaId, java.sql.Types.INTEGER);
+                .addValue("zona", zonaId, java.sql.Types.INTEGER)
+                .addValue("sector", sectorId, java.sql.Types.INTEGER);
 
         Map<String, Object> rutas = jdbc.queryForMap("""
                 SELECT count(*) AS rutas,
@@ -60,9 +62,11 @@ public class PanelControlador {
                                      WHERE p.ruta_id = r.id AND p.estado = 'recolectada')), 0) AS recolectados
                 FROM ruta r JOIN camion k ON k.id = r.camion_id
                 WHERE r.creada_at >= :desde AND (:zona::int IS NULL OR k.zona_id = :zona)
+                  AND (:sector::int IS NULL OR k.sector_id = :sector)
                 """, datos);
         Number kmRecorridos = jdbc.queryForObject(
-                "SELECT COALESCE(sum(km_recorridos_hoy), 0) FROM camion WHERE (:zona::int IS NULL OR zona_id = :zona)",
+                "SELECT COALESCE(sum(km_recorridos_hoy), 0) FROM camion WHERE (:zona::int IS NULL OR zona_id = :zona)"
+                        + " AND (:sector::int IS NULL OR sector_id = :sector)",
                 datos, Number.class);
         Long incidentesAbiertos = jdbc.queryForObject("""
                 SELECT count(*) FROM incidente i
@@ -70,6 +74,7 @@ public class PanelControlador {
                 LEFT JOIN camion k ON k.id = i.camion_id
                 WHERE i.estado IN ('pendiente', 'confirmado')
                   AND (:zona::int IS NULL OR c.zona_id = :zona OR k.zona_id = :zona)
+                  AND (:sector::int IS NULL OR c.sector_id = :sector OR k.sector_id = :sector)
                 """, datos, Long.class);
 
         Map<String, Long> sensores = new LinkedHashMap<>();
@@ -78,13 +83,15 @@ public class PanelControlador {
         }
         jdbc.query("""
                 SELECT estado_sensor, count(*) AS cantidad FROM contenedor
-                WHERE activo AND (:zona::int IS NULL OR zona_id = :zona) GROUP BY estado_sensor
+                WHERE activo AND (:zona::int IS NULL OR zona_id = :zona)
+                  AND (:sector::int IS NULL OR sector_id = :sector) GROUP BY estado_sensor
                 """, datos, fila -> {
             sensores.put(fila.getString("estado_sensor"), fila.getLong("cantidad"));
         });
 
-        var lista = zonaId == null ? contenedores.findByActivoTrueOrderById()
-                : contenedores.findByZonaIdAndActivoTrueOrderById(zonaId);
+        var lista = sectorId != null ? contenedores.findBySectorIdAndActivoTrueOrderById(sectorId)
+                : zonaId != null ? contenedores.findByZonaIdAndActivoTrueOrderById(zonaId)
+                : contenedores.findByActivoTrueOrderById();
         long prioritarios = prioridad.evaluar(lista, ahora).values().stream().filter(Evaluacion::esPrioritario).count();
 
         return new Resumen(Fechas.enBuenosAires(ahora), ((Number) rutas.get("recolectados")).longValue(),

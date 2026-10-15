@@ -16,12 +16,13 @@ public interface IncidenteRepositorio extends JpaRepository<Incidente, Long> {
             LEFT JOIN FETCH i.contenedor c
             LEFT JOIN FETCH i.camion k
             WHERE (:zonaId IS NULL OR c.zonaId = :zonaId OR k.zonaId = :zonaId)
+              AND (:sectorId IS NULL OR c.sectorId = :sectorId OR k.sectorId = :sectorId)
               AND (:tipo IS NULL OR i.tipo = :tipo)
               AND (:estado IS NULL OR i.estado = :estado)
             ORDER BY i.creadoAt DESC, i.id DESC
             """)
-    List<Incidente> buscar(@Param("zonaId") Integer zonaId, @Param("tipo") String tipo,
-            @Param("estado") String estado);
+    List<Incidente> buscar(@Param("zonaId") Integer zonaId, @Param("sectorId") Integer sectorId,
+            @Param("tipo") String tipo, @Param("estado") String estado);
 
     @Query("""
             SELECT i FROM Incidente i LEFT JOIN FETCH i.contenedor

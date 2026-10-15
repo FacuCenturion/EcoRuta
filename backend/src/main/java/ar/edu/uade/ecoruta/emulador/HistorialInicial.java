@@ -35,10 +35,10 @@ class HistorialInicial {
     private static final int PASOS = 24 * 60 / EmuladorDeSensores.MINUTOS_POR_PASO;
 
     // Contenedores con un papel fijo en el arranque de la demo
-    static final String SENSOR_IRREGULAR = "Z2-11";
+    static final String SENSOR_IRREGULAR = "SNI-05";
     private static final Map<String, String> REPORTES_VECINALES = Map.of(
-            "Z2-04", "Hay bolsas tiradas al lado del contenedor.",
-            "Z3-07", "El contenedor está lleno y huele mal.");
+            "MON-03", "Hay bolsas tiradas al lado del contenedor.",
+            "STE-07", "El contenedor está lleno y huele mal.");
     private static final List<Integer> LECTURAS_IRREGULARES = List.of(52, 61, 49, 62, 48, 60);
 
     private final ContenedorRepositorio contenedores;
@@ -116,7 +116,7 @@ class HistorialInicial {
     }
 
     private static Map<String, String> sortearFallas(List<Contenedor> todos, Random azar) {
-        Set<String> reservados = Set.of(SENSOR_IRREGULAR, "Z2-04", "Z3-07");
+        Set<String> reservados = Set.of(SENSOR_IRREGULAR, "MON-03", "STE-07");
         List<Contenedor> candidatos = new ArrayList<>(
                 todos.stream().filter(c -> !reservados.contains(c.getId())).toList());
         Map<String, String> fallas = new HashMap<>();
