@@ -9,6 +9,7 @@ export const ETIQUETA_ESTADO_SENSOR: Record<EstadoSensor, string> = {
   irregular: 'Lecturas irregulares',
   congelado: 'Valor congelado',
   sin_senal: 'Sin señal',
+  trabado: 'Trabado',
 };
 
 export const DETALLE_ESTADO_SENSOR: Record<EstadoSensor, string> = {
@@ -16,6 +17,7 @@ export const DETALLE_ESTADO_SENSOR: Record<EstadoSensor, string> = {
   irregular: 'Sube y baja de golpe, puede haber alguien revolviendo',
   congelado: `Marca lo mismo hace más de ${HORAS_VALOR_CONGELADO} h`,
   sin_senal: `No manda datos hace más de ${HORAS_SIN_SENAL} h`,
+  trabado: 'Lo vaciaron y siguió marcando lo mismo que antes',
 };
 
 // Si el sensor marca exactamente el mismo valor durante varias horas,
@@ -104,9 +106,7 @@ export function curvaEstimada(contenedor: Contenedor, relojMs: number): LecturaS
 // Lo llama el simulador después de cada lectura (o de cada lectura que no llegó).
 export function actualizarSensor(contenedor: Contenedor, relojMs: number): void {
   contenedor.estadoSensor = estadoDelSensor(contenedor, relojMs);
-  contenedor.nivelEstimado = sensorConfiable(contenedor.estadoSensor)
-    ? undefined
-    : nivelEstimado(contenedor, relojMs);
+  contenedor.nivelEstimado = sensorConfiable(contenedor.estadoSensor) ? undefined : nivelEstimado(contenedor, relojMs);
 }
 
 export interface ResumenSensores {
@@ -116,7 +116,13 @@ export interface ResumenSensores {
 }
 
 export function resumenSensores(contenedores: Contenedor[]): ResumenSensores {
-  const porEstado: Record<EstadoSensor, number> = { funcionando: 0, irregular: 0, congelado: 0, sin_senal: 0 };
+  const porEstado: Record<EstadoSensor, number> = {
+    funcionando: 0,
+    irregular: 0,
+    congelado: 0,
+    sin_senal: 0,
+    trabado: 0,
+  };
   contenedores.forEach((c) => {
     porEstado[c.estadoSensor] += 1;
   });

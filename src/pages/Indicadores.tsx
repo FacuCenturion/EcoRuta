@@ -14,8 +14,7 @@ import {
 import Encabezado from '../components/Encabezado';
 import Tarjeta from '../components/Tarjeta';
 import { useSimulacion } from '../context/SimulacionContext';
-import { ZONAS } from '../data/zonas';
-import { obtenerHistorial } from '../logic/historial';
+import { useIndicadores } from '../context/useIndicadores';
 import { kgCo2 } from '../logic/indicadores';
 import { formatearDecimal, formatearFechaCorta, formatearNumero } from '../utils/formato';
 
@@ -42,18 +41,26 @@ function descargarCsv(nombre: string, filas: (string | number)[][]) {
 }
 
 export default function Indicadores() {
-  const { zonaFiltro } = useSimulacion();
-  const historial = obtenerHistorial();
+  const { zonaFiltro, areas, palabraArea, nombreArea, areaDestacada, fuente } = useSimulacion();
   const idZona = zonaFiltro === 'todas' ? undefined : zonaFiltro;
+  const { datos: historial, error } = useIndicadores(idZona);
 
-  const datosKm = historial.dias.map((dia) => {
-    const fuente = idZona === undefined ? dia : dia.porZona[idZona];
-    return {
-      fecha: formatearFechaCorta(dia.fechaMs),
-      dinamica: Math.round(fuente.kmDinamica),
-      fija: Math.round(fuente.kmFija),
-    };
-  });
+  if (!historial) {
+    return (
+      <>
+        <Encabezado titulo="Indicadores" conSimulacion={false} />
+        <p className={error ? 'login__error' : 'vacio'} role={error ? 'alert' : undefined}>
+          {error ?? 'Calculando indicadores…'}
+        </p>
+      </>
+    );
+  }
+
+  const datosKm = historial.dias.map((dia) => ({
+    fecha: formatearFechaCorta(dia.fechaMs),
+    dinamica: Math.round(dia.kmDinamica),
+    fija: Math.round(dia.kmFija),
+  }));
   const kmEvitados = datosKm.reduce((suma, d) => suma + (d.fija - d.dinamica), 0);
 
   // Desbordes por semana: las primeras semanas con ruta fija, el resto con ruta dinámica
@@ -67,21 +74,27 @@ export default function Indicadores() {
   const despues = datosSemanas.filter((s) => !s.antes);
   const promedioDespues = despues.reduce((suma, s) => suma + s.desbordes, 0) / despues.length;
   const variacionDesbordes = promedioAntes ? Math.round(((promedioDespues - promedioAntes) / promedioAntes) * 100) : 0;
+  // Con backend no hay un "antes": las dos rutas se calculan semana a semana con las mismas lecturas
+  const desbordesFija = historial.semanas.reduce((suma, s) => suma + s.desbordesFija, 0);
+  const desbordesDinamica = historial.semanas.reduce((suma, s) => suma + s.desbordesDinamica, 0);
+  const comparaLasDos = fuente === 'api';
 
-  const eficiencia = ZONAS.map((z) => ({ zona: `Zona ${z.id}`, indice: Math.round(historial.eficienciaPorZona[z.id]) })).sort(
-    (a, b) => b.indice - a.indice,
-  );
+  const eficiencia = areas
+    .map((z) => ({ zona: nombreArea(z.id), indice: Math.round(historial.eficienciaPorArea[z.id] ?? 0) }))
+    .sort((a, b) => b.indice - a.indice);
   const menorEficiencia = Math.min(...eficiencia.map((e) => e.indice));
 
-  const zonaCalor = idZona ?? 2;
-  const calor = historial.mapaCalor[zonaCalor];
+  const zonaCalor = idZona ?? areaDestacada;
+  const textoArea = (id: number) => nombreArea(id).toLowerCase();
+  const deArea = (id: number) => (palabraArea === 'Zona' ? `de la zona ${id}` : `del sector ${id}`);
+  const calor = historial.mapaCalor[zonaCalor] ?? [];
 
   function exportar() {
     descargarCsv('ecoruta-indicadores.csv', [
       ['Fecha', 'Km ruta dinamica', 'Km ruta fija estimada'],
       ...datosKm.map((d) => [d.fecha, d.dinamica, d.fija]),
       [],
-      ['Zona', 'Indice de eficiencia'],
+      [palabraArea, 'Indice de eficiencia'],
       ...eficiencia.map((e) => [e.zona, e.indice]),
     ]);
   }
@@ -90,7 +103,11 @@ export default function Indicadores() {
     <>
       <Encabezado
         titulo="Indicadores"
-        subtitulo="Cómo rinde el servicio desde que las rutas son dinámicas. Valores estimados con datos simulados."
+        subtitulo={
+          fuente === 'api'
+            ? 'Cómo rinde el servicio desde que las rutas son dinámicas, contra una ruta fija con las mismas lecturas. Las primeras semanas son historial simulado.'
+            : 'Cómo rinde el servicio desde que las rutas son dinámicas. Valores estimados con datos simulados.'
+        }
         conSimulacion={false}
         acciones={
           <>
@@ -109,7 +126,11 @@ export default function Indicadores() {
           variante="oscura"
           titulo="Km evitados, 30 días"
           valor={`${formatearNumero(kmEvitados)} km`}
-          detalle={idZona ? `contra la ruta fija de la zona ${idZona}` : 'contra la ruta fija de cada zona'}
+          detalle={
+            idZona
+              ? `contra la ruta fija ${deArea(idZona)}`
+              : `contra la ruta fija de cada ${palabraArea.toLowerCase()}`
+          }
         />
         <Tarjeta
           variante="verde"
@@ -118,9 +139,13 @@ export default function Indicadores() {
           detalle="estimado por consumo de gasoil"
         />
         <Tarjeta
-          titulo="Desbordes reportados"
-          valor={`${variacionDesbordes}%`}
-          detalle="contra las semanas con ruta fija"
+          titulo={comparaLasDos ? `Desbordes, ${historial.semanas.length} semanas` : 'Desbordes reportados'}
+          valor={comparaLasDos ? formatearNumero(desbordesDinamica) : `${variacionDesbordes}%`}
+          detalle={
+            comparaLasDos
+              ? `con la ruta fija habrían sido ${formatearNumero(desbordesFija)}`
+              : 'contra las semanas con ruta fija'
+          }
         />
         <Tarjeta
           titulo="Vaciados por debajo del 50%"
@@ -142,7 +167,7 @@ export default function Indicadores() {
               </li>
             </ul>
           </div>
-          <p className="nota">{idZona ? `Zona ${idZona}` : 'Toda la flota'}, últimos 30 días</p>
+          <p className="nota">{idZona ? nombreArea(idZona) : 'Toda la flota'}, últimos 30 días</p>
           <div className="grafico">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={datosKm} margin={{ top: 8, right: 8, left: -8, bottom: 0 }}>
@@ -150,7 +175,14 @@ export default function Indicadores() {
                 <XAxis dataKey="fecha" tick={{ fontSize: 11 }} interval={4} />
                 <YAxis tick={{ fontSize: 11 }} domain={[0, 'auto']} />
                 <Tooltip />
-                <Area type="monotone" dataKey="dinamica" name="Ruta dinámica" stroke="#2c3526" strokeWidth={2} fill="#e5e9dc" />
+                <Area
+                  type="monotone"
+                  dataKey="dinamica"
+                  name="Ruta dinámica"
+                  stroke="#2c3526"
+                  strokeWidth={2}
+                  fill="#e5e9dc"
+                />
                 <Line
                   type="monotone"
                   dataKey="fija"
@@ -169,20 +201,36 @@ export default function Indicadores() {
           <div className="panel__cabecera">
             <h2 id="titulo-desbordes">Desbordes por semana</h2>
           </div>
-          <p className="nota">En mostaza, las semanas antes de Ecoruta (ruta fija). Todas las zonas.</p>
+          <p className="nota">
+            {comparaLasDos
+              ? 'En mostaza, lo que habría pasado con la ruta fija; en verde, con Ecoruta.'
+              : 'En mostaza, las semanas antes de Ecoruta (ruta fija).'}{' '}
+            {idZona ? `${nombreArea(idZona)}.` : palabraArea === 'Zona' ? 'Todas las zonas.' : 'Todos los sectores.'}
+          </p>
           <div className="grafico">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={datosSemanas} margin={{ top: 16, right: 8, left: -18, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e3dccb" vertical={false} />
-                <XAxis dataKey="etiqueta" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip formatter={(valor) => [valor, 'Desbordes']} />
-                <Bar dataKey="desbordes" radius={[3, 3, 0, 0]} label={{ position: 'top', fontSize: 11 }}>
-                  {datosSemanas.map((s) => (
-                    <Cell key={s.etiqueta} fill={s.antes ? '#a07a2c' : '#8ba67c'} />
-                  ))}
-                </Bar>
-              </BarChart>
+              {comparaLasDos ? (
+                <BarChart data={historial.semanas} margin={{ top: 16, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e3dccb" vertical={false} />
+                  <XAxis dataKey="etiqueta" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="desbordesFija" name="Ruta fija" fill="#a07a2c" radius={[3, 3, 0, 0]} />
+                  <Bar dataKey="desbordesDinamica" name="Ecoruta" fill="#8ba67c" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              ) : (
+                <BarChart data={datosSemanas} margin={{ top: 16, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e3dccb" vertical={false} />
+                  <XAxis dataKey="etiqueta" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip formatter={(valor) => [valor, 'Desbordes']} />
+                  <Bar dataKey="desbordes" radius={[3, 3, 0, 0]} label={{ position: 'top', fontSize: 11 }}>
+                    {datosSemanas.map((s) => (
+                      <Cell key={s.etiqueta} fill={s.antes ? '#a07a2c' : '#8ba67c'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              )}
             </ResponsiveContainer>
           </div>
         </section>
@@ -200,16 +248,16 @@ export default function Indicadores() {
               <li>Alto</li>
             </ul>
           </div>
-          <p className="nota">Llenado promedio por día y hora, zona {zonaCalor}</p>
-          <div className="mapa-calor" role="img" aria-label={`Mapa de calor del llenado de la zona ${zonaCalor}`}>
+          <p className="nota">Llenado promedio por día y hora, {textoArea(zonaCalor)}</p>
+          <div className="mapa-calor" role="img" aria-label={`Mapa de calor del llenado ${deArea(zonaCalor)}`}>
             {DIAS.map((nombre, d) => (
               <div key={nombre} className="mapa-calor__fila">
                 <span>{nombre}</span>
                 {HORAS_MAPA.map((h) => (
                   <span
                     key={h}
-                    className={`mapa-calor__celda ${claseCalor(calor[d][h])}`}
-                    title={`${nombre} ${h}:00, ${Math.round(calor[d][h])}%`}
+                    className={`mapa-calor__celda ${claseCalor(calor[d]?.[h] ?? 0)}`}
+                    title={`${nombre} ${h}:00, ${Math.round(calor[d]?.[h] ?? 0)}%`}
                   />
                 ))}
               </div>
@@ -225,7 +273,7 @@ export default function Indicadores() {
 
         <section className="panel" aria-labelledby="titulo-eficiencia">
           <div className="panel__cabecera">
-            <h2 id="titulo-eficiencia">Índice de eficiencia por zona</h2>
+            <h2 id="titulo-eficiencia">Índice de eficiencia por {palabraArea.toLowerCase()}</h2>
           </div>
           <p className="nota">Contenedores vaciados en el momento justo (entre 50% y 99% de llenado), sobre 100</p>
           <ul className="barras-zona">

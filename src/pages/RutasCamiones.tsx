@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { vistaDeContenedores } from '../api/adaptadores';
 import Encabezado from '../components/Encabezado';
 import MapaContenedores from '../components/MapaContenedores';
 import { useSimulacion } from '../context/SimulacionContext';
@@ -22,12 +23,12 @@ const ETIQUETA_CHIP: Record<EstadoCamion, string> = {
 };
 
 export default function RutasCamiones() {
-  const { estado, zonaFiltro } = useSimulacion();
+  const { estado, zonaFiltro, nombreArea } = useSimulacion();
   const [busqueda, setBusqueda] = useState('');
   const [elegidoId, setElegidoId] = useState<string>();
 
   const flota = estado.camiones.filter((c) => {
-    const coincideZona = zonaFiltro === 'todas' || c.zonaId === zonaFiltro;
+    const coincideZona = zonaFiltro === 'todas' || c.areaId === zonaFiltro;
     const texto = `${c.numero} ${c.chofer}`.toLowerCase();
     return coincideZona && texto.includes(busqueda.trim().toLowerCase());
   });
@@ -35,7 +36,10 @@ export default function RutasCamiones() {
 
   return (
     <>
-      <Encabezado titulo="Rutas y camiones" subtitulo="Seguimiento de la flota y del orden de paradas de cada camión." />
+      <Encabezado
+        titulo="Rutas y camiones"
+        subtitulo="Seguimiento de la flota y del orden de paradas de cada camión."
+      />
       <div className="rutas">
         <section className="panel" aria-labelledby="titulo-flota">
           <div className="panel__cabecera">
@@ -70,7 +74,7 @@ export default function RutasCamiones() {
                     <span className="insignia">{String(c.numero).padStart(2, '0')}</span>
                     <span className="fila-boton__texto">
                       <strong>Camión {c.numero}</strong>
-                      <small>Zona {c.zonaId}, generales</small>
+                      <small>{nombreArea(c.areaId)}, generales</small>
                       <span className="avance__barra avance__barra--fina">
                         <span style={{ width: `${avance.total ? (avance.hechas / avance.total) * 100 : 0}%` }} />
                       </span>
@@ -95,7 +99,7 @@ export default function RutasCamiones() {
 }
 
 function DetalleCamion({ camion }: { camion: Camion }) {
-  const { estado } = useSimulacion();
+  const { estado, nombreArea, fuente } = useSimulacion();
   const zona = buscarZona(camion.zonaId);
   const avance = avanceDeRuta(camion);
   const contenedores = estado.contenedores.filter((c) => camion.paradas.some((p) => p.contenedorId === c.id));
@@ -116,10 +120,11 @@ function DetalleCamion({ camion }: { camion: Camion }) {
       <section className="resumen-camion" aria-label={`Camión ${camion.numero}`}>
         <div>
           <h2>
-            Camión {camion.numero} <span className={`estado estado--${camion.estado}`}>{ETIQUETA_CAMION[camion.estado]}</span>
+            Camión {camion.numero}{' '}
+            <span className={`estado estado--${camion.estado}`}>{ETIQUETA_CAMION[camion.estado]}</span>
           </h2>
           <p>
-            Chofer: {camion.chofer}. Zona {camion.zonaId}, residuos generales.
+            Chofer: {camion.chofer}. {nombreArea(camion.areaId)}, residuos generales.
           </p>
         </div>
         <dl className="resumen-camion__datos">
@@ -155,7 +160,14 @@ function DetalleCamion({ camion }: { camion: Camion }) {
             contenedores={contenedores}
             camiones={[camion]}
             relojMs={estado.relojMs}
-            vista={{ lat: zona.centro.lat, lng: zona.centro.lng, zoom: 15 }}
+            vista={
+              // Con backend todos los camiones son de la zona 1: se encuadra el recorrido de cada uno
+              (fuente === 'api' ? vistaDeContenedores(contenedores, 15) : null) ?? {
+                lat: zona.centro.lat,
+                lng: zona.centro.lng,
+                zoom: 15,
+              }
+            }
             recorridoHecho={recorridoHecho}
             recorridoPendiente={recorridoPendiente}
             zonas={[zona]}
@@ -181,12 +193,14 @@ function DetalleCamion({ camion }: { camion: Camion }) {
                     </span>
                     <span className="parada__numero">{i + 1}</span>
                     <span className="parada__texto">
-                      {contenedor?.direccion}
+                      {contenedor?.direccion ?? parada.direccion}
                       {esProxima && <span className="etiqueta etiqueta--azul">Próxima</span>}
                       {parada.estado === 'no_se_pudo' && <span className="parada__motivo">{parada.motivo}</span>}
                     </span>
                     <span className="parada__hora">
-                      {esProxima ? `llega ${formatearHora(parada.etaMs)}` : formatearHora(parada.horaRealMs ?? parada.etaMs)}
+                      {esProxima
+                        ? `llega ${formatearHora(parada.etaMs)}`
+                        : formatearHora(parada.horaRealMs ?? parada.etaMs)}
                     </span>
                   </li>
                 );

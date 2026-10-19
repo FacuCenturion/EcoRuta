@@ -28,4 +28,5 @@ export const COLOR_ESTADO_SENSOR: Record<EstadoSensor, string> = {
   irregular: '#ecd9a3',
   congelado: '#a07a2c',
   sin_senal: '#9b4a36',
+  trabado: '#6b5a3a',
 };

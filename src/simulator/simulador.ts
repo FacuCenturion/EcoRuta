@@ -155,6 +155,7 @@ function agregarIncidente(
     id: `INC-${String(estado.contadorIncidentes).padStart(4, '0')}`,
     estado: 'pendiente',
     zonaId: contenedor.zonaId,
+    areaId: contenedor.areaId,
     direccion: contenedor.direccion,
     creadoMs: estado.relojMs,
   });

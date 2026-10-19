@@ -38,6 +38,16 @@ npm run dev
 
 Después abrir la dirección que muestra la terminal (normalmente http://localhost:5173). El mapa necesita conexión a internet para cargar las calles.
 
+### Con el backend
+
+Así como está, el panel simula los datos en el navegador. Para usar el backend (carpeta `backend/`, ver su README):
+
+1. Levantar el backend: `cd backend && ./mvnw spring-boot:run`.
+2. Crear `.env.local` (copiando `.env.example`) con `VITE_API_URL=http://localhost:8080/api/v1`.
+3. Reiniciar `npm run dev` y entrar con los mismos usuarios de prueba.
+
+Con backend, el panel muestra solo la zona 1 dividida en 4 sectores, con los 180 contenedores reales, y el filtro del encabezado pasa a ser por sector. Los datos se actualizan cuando el backend avisa que hubo cambios (Server-Sent Events), sin preguntar cada tantos segundos. Pausar y acelerar desde el encabezado controla la simulación del backend, que es compartida: si dos personas tienen el panel abierto, ven lo mismo.
+
 ### Usuarios de prueba
 
 La página pide iniciar sesión. Hay dos usuarios de ejemplo:
@@ -89,12 +99,13 @@ npm run build     # versión para producción
    | 7 | Transportes Olivos - Urbaser - UTE | 3, 4 | Av. Córdoba, Sánchez de Loria, Av. Caseros, Av. Riestra, Av. Varela, Av. Entre Ríos, Av. Brasil |
 
    Para regenerar los contornos: `pip install shapely` y `python scripts/generar_limites_zonas.py`.
-6. **Estado compartido** (`src/context/SimulacionContext.tsx`): todas las pantallas leen los datos de acá.
+6. **Estado compartido** (`src/context/SimulacionContext.tsx`): todas las pantallas leen los datos de acá. Sin `VITE_API_URL` los arma el simulador del navegador; con `VITE_API_URL` los pide al backend (`src/api/`) y las pantallas no notan la diferencia.
 
 ## Estructura
 
 ```
 src/
+  api/          cliente de la API del backend, avisos en vivo y conversión de sus respuestas
   components/   piezas que se reutilizan (mapa, tarjetas, menú); mapa/ tiene Google Maps y el mapa alternativo
   context/      estado del sistema que leen las pantallas
   data/         zonas (con sus límites en limites-zonas.json), contenedores y camiones de ejemplo
@@ -109,10 +120,9 @@ scripts/        generar_limites_zonas.py, arma limites-zonas.json a partir de lo
 
 ## Limitaciones conocidas
 
-- Los límites de las zonas son los oficiales (unión de comunas), pero las posiciones de los contenedores, las bases y las calles son de ejemplo.
-- Las distancias se calculan en línea recta; en la calle serían algo más largas.
-- Todavía no hay backend ni base de datos: al recargar la página la simulación vuelve a empezar.
-- El login es de prueba (ver arriba).
+- Sin backend, las posiciones de los contenedores, las bases y las calles son de ejemplo, y al recargar la página la simulación vuelve a empezar. Con backend, los contenedores son los reales de la zona 1.
+- Las distancias se calculan en línea recta y las rutas se dibujan con líneas rectas entre paradas; en la calle serían algo más largas.
+- Sin backend, el login es de prueba (ver arriba): las contraseñas están en el código.
 - No está la app del chofer (etapa posterior) ni la conexión real con Boti. En el simulador los camiones recolectan solos para que el panel tenga movimiento.
 - En "Rutas y camiones" los botones "Reasignar paradas" y "Contactar chofer" están deshabilitados: son del Release 2.
 

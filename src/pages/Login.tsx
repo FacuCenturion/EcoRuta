@@ -10,17 +10,18 @@ export default function Login() {
   const navegar = useNavigate();
   const [nombre, setNombre] = useState('');
   const [contrasena, setContrasena] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [enviando, setEnviando] = useState(false);
 
   if (usuario) return <Navigate to="/" replace />;
 
-  function enviar(evento: FormEvent) {
+  async function enviar(evento: FormEvent) {
     evento.preventDefault();
-    if (iniciarSesion(nombre, contrasena)) {
-      navegar('/', { replace: true });
-    } else {
-      setError(true);
-    }
+    setEnviando(true);
+    const problema = await iniciarSesion(nombre, contrasena);
+    setEnviando(false);
+    if (problema) setError(problema);
+    else navegar('/', { replace: true });
   }
 
   return (
@@ -43,7 +44,7 @@ export default function Login() {
               value={nombre}
               onChange={(e) => {
                 setNombre(e.target.value);
-                setError(false);
+                setError(null);
               }}
               required
             />
@@ -57,18 +58,18 @@ export default function Login() {
               value={contrasena}
               onChange={(e) => {
                 setContrasena(e.target.value);
-                setError(false);
+                setError(null);
               }}
               required
             />
           </label>
           {error && (
             <p className="login__error" role="alert">
-              Usuario o contraseña incorrectos. Revisá los datos e intentá de nuevo.
+              {error}
             </p>
           )}
-          <button type="submit" className="boton boton--primario">
-            Ingresar
+          <button type="submit" className="boton boton--primario" disabled={enviando}>
+            {enviando ? 'Ingresando…' : 'Ingresar'}
           </button>
         </form>
 
@@ -86,7 +87,7 @@ export default function Login() {
                   onClick={() => {
                     setNombre(u.usuario);
                     setContrasena(u.contrasena);
-                    setError(false);
+                    setError(null);
                   }}
                 >
                   Completar

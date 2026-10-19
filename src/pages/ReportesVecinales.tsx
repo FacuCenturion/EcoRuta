@@ -2,20 +2,19 @@ import { useState } from 'react';
 import Encabezado from '../components/Encabezado';
 import { ETIQUETA_ESTADO } from '../components/ParaRevisar';
 import { useSimulacion } from '../context/SimulacionContext';
-import { ZONAS } from '../data/zonas';
 import { formatearFechaCorta, formatearHora } from '../utils/formato';
 
 export default function ReportesVecinales() {
-  const { estado, zonaFiltro, reportarVecino } = useSimulacion();
-  const [zonaForm, setZonaForm] = useState(2);
+  const { estado, zonaFiltro, reportarVecino, areas, palabraArea, nombreArea, areaDestacada } = useSimulacion();
+  const [zonaForm, setZonaForm] = useState(areaDestacada);
   const [contenedorId, setContenedorId] = useState('');
   const [comentario, setComentario] = useState('');
   const [enviado, setEnviado] = useState(false);
 
   const reportes = estado.incidentes.filter(
-    (i) => i.tipo === 'reporte_vecinal' && (zonaFiltro === 'todas' || i.zonaId === zonaFiltro),
+    (i) => i.tipo === 'reporte_vecinal' && (zonaFiltro === 'todas' || i.areaId === zonaFiltro),
   );
-  const opciones = estado.contenedores.filter((c) => c.zonaId === zonaForm);
+  const opciones = estado.contenedores.filter((c) => c.areaId === zonaForm);
   const idElegido = opciones.some((c) => c.id === contenedorId) ? contenedorId : opciones[0]?.id;
 
   function enviar(evento: React.FormEvent) {
@@ -42,11 +41,11 @@ export default function ReportesVecinales() {
           </p>
           <form className="formulario" onSubmit={enviar}>
             <label>
-              Zona
+              {palabraArea}
               <select value={zonaForm} onChange={(e) => setZonaForm(Number(e.target.value))}>
-                {ZONAS.map((z) => (
+                {areas.map((z) => (
                   <option key={z.id} value={z.id}>
-                    Zona {z.id}
+                    {palabraArea === 'Zona' ? z.nombre : `${palabraArea} ${z.id}: ${z.nombre}`}
                   </option>
                 ))}
               </select>
@@ -76,7 +75,11 @@ export default function ReportesVecinales() {
             <button type="submit" className="boton boton--primario">
               Enviar reporte
             </button>
-            {enviado && <p className="nota" role="status">Reporte enviado. Ya aparece en la lista y en Para revisar.</p>}
+            {enviado && (
+              <p className="nota" role="status">
+                Reporte enviado. Ya aparece en la lista y en Para revisar.
+              </p>
+            )}
           </form>
         </section>
 
@@ -97,7 +100,8 @@ export default function ReportesVecinales() {
                   <div className="reporte__texto">
                     <strong>{r.direccion}</strong>
                     <span>
-                      Zona {r.zonaId} · vía {r.origen} · {formatearFechaCorta(r.creadoMs)} {formatearHora(r.creadoMs)}
+                      {nombreArea(r.areaId)} · vía {r.origen} · {formatearFechaCorta(r.creadoMs)}{' '}
+                      {formatearHora(r.creadoMs)}
                     </span>
                     <span>{r.descripcion}</span>
                     <span className={`estado estado--${r.estado}`}>{ETIQUETA_ESTADO[r.estado]}</span>

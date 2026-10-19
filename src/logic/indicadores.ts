@@ -13,12 +13,13 @@ export function esAbierto(estado: string): boolean {
   return estado === 'pendiente' || estado === 'confirmado';
 }
 
-export function contenedoresPrioritarios(estado: EstadoSimulacion, zonaId?: number) {
+// areaId es la zona o el sector, según lo que use el filtro del panel
+export function contenedoresPrioritarios(estado: EstadoSimulacion, areaId?: number) {
   const fecha = new Date(estado.relojMs);
   const hora = fecha.getHours();
   const dia = diaDeSemana(fecha);
   return estado.contenedores
-    .filter((c) => zonaId === undefined || c.zonaId === zonaId)
+    .filter((c) => areaId === undefined || c.areaId === areaId)
     .map((c) => ({ contenedor: c, motivo: motivoDelContenedor(c, hora, dia) }))
     .filter((x) => x.motivo !== null) as {
     contenedor: EstadoSimulacion['contenedores'][number];

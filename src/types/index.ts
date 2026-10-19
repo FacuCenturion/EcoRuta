@@ -24,16 +24,22 @@ export interface LecturaSensor {
 }
 
 // Estado del sensor deducido de sus lecturas (no sabemos nada de la batería)
-export type EstadoSensor = 'funcionando' | 'irregular' | 'congelado' | 'sin_senal';
+// "trabado" lo detecta solo el backend: el chofer vació el contenedor y el sensor siguió marcando lo mismo
+export type EstadoSensor = 'funcionando' | 'irregular' | 'congelado' | 'sin_senal' | 'trabado';
 
 // Falla que el simulador le pone a un sensor. El sistema no la conoce:
 // la tiene que descubrir mirando las lecturas.
 export type FallaSimulada = 'ninguna' | 'sin_senal' | 'congelado';
 
+// Las zonas son de las empresas recolectoras. Con datos simulados en el navegador el panel
+// filtra por zona; conectado al backend trabaja solo con la zona 1 dividida en sectores.
+// areaId es lo que usa el filtro en cada caso: la zona o el sector.
 export interface Contenedor {
   id: string;
   direccion: string;
   zonaId: number;
+  areaId: number;
+  barrio?: string;
   posicion: Coordenada;
   velocidad: number; // % de llenado por hora en condiciones normales
   nivelReal: number; // lo que realmente hay dentro (el sensor no lo ve directo)
@@ -48,6 +54,9 @@ export interface Contenedor {
   estadoSensor: EstadoSensor;
   nivelEstimado?: number; // se calcula cuando no se puede confiar en el sensor
   ultimaRecoleccionMs: number; // última vez que un chofer confirmó que lo vació (0 si no hay dato)
+  // Lo que ya calculó el backend; con datos simulados en el navegador se calcula acá
+  motivo?: 'llenado' | 'riesgo' | 'reporte' | 'tiempo' | null;
+  nivel?: NivelLlenado;
 }
 
 export type EstadoCamion = 'en_ruta' | 'en_descarga' | 'en_base' | 'demorado';
@@ -56,6 +65,8 @@ export type EstadoParada = 'pendiente' | 'recolectada' | 'no_se_pudo';
 
 export interface Parada {
   contenedorId: string;
+  direccion?: string;
+  motivoVisita?: string; // por qué pasa el camión: llenado, riesgo, reporte, tiempo o de_paso
   estado: EstadoParada;
   etaMs: number; // hora estimada de llegada
   horaRealMs?: number; // hora en la que se recolectó
@@ -66,6 +77,7 @@ export interface Camion {
   id: string;
   numero: number;
   zonaId: number;
+  areaId: number;
   chofer: string;
   estado: EstadoCamion;
   paradas: Parada[];
@@ -77,7 +89,7 @@ export interface Camion {
   ticksDescarga: number;
 }
 
-export type TipoIncidente = 'llenado_irregular' | 'no_se_pudo' | 'reporte_vecinal';
+export type TipoIncidente = 'llenado_irregular' | 'no_se_pudo' | 'reporte_vecinal' | 'falla_sensor' | 'desborde';
 export type EstadoIncidente = 'pendiente' | 'confirmado' | 'descartado' | 'resuelto';
 
 export interface Incidente {
@@ -86,6 +98,7 @@ export interface Incidente {
   estado: EstadoIncidente;
   contenedorId: string;
   zonaId: number;
+  areaId: number;
   direccion: string;
   descripcion: string;
   sugerencia: string;

@@ -8,6 +8,8 @@ export const ETIQUETA_TIPO: Record<Incidente['tipo'], string> = {
   llenado_irregular: 'Llenado irregular',
   no_se_pudo: 'No se pudo recolectar',
   reporte_vecinal: 'Reporte vecinal',
+  falla_sensor: 'Falla de sensor',
+  desborde: 'Desborde',
 };
 
 export const ETIQUETA_ESTADO: Record<Incidente['estado'], string> = {
@@ -21,17 +23,19 @@ const ICONO_TIPO: Record<Incidente['tipo'], JSX.Element> = {
   llenado_irregular: <IconoSensor />,
   no_se_pudo: <IconoIncidentes />,
   reporte_vecinal: <IconoReportes />,
+  falla_sensor: <IconoSensor />,
+  desborde: <IconoIncidentes />,
 };
 
 export function FilaIncidente({ incidente }: { incidente: Incidente }) {
-  const { decidir } = useSimulacion();
+  const { decidir, nombreArea } = useSimulacion();
   return (
     <li className="revisar__item">
       <span className={`revisar__icono revisar__icono--${incidente.tipo}`}>{ICONO_TIPO[incidente.tipo]}</span>
       <div className="revisar__texto">
         <strong>{ETIQUETA_TIPO[incidente.tipo]}</strong>
         <span>
-          {incidente.direccion}, zona {incidente.zonaId}
+          {incidente.direccion}, {nombreArea(incidente.areaId).toLowerCase()}
           {incidente.camionNumero ? `, camión ${incidente.camionNumero}` : ''}
         </span>
         <span className="revisar__descripcion">{incidente.descripcion}</span>
@@ -61,7 +65,7 @@ export default function ParaRevisar({ maximo = 4 }: { maximo?: number }) {
   const { estado, zonaFiltro } = useSimulacion();
   // Primero los que esperan una decisión, después los ya confirmados que siguen abiertos
   const abiertos = estado.incidentes
-    .filter((i) => esAbierto(i.estado) && (zonaFiltro === 'todas' || i.zonaId === zonaFiltro))
+    .filter((i) => esAbierto(i.estado) && (zonaFiltro === 'todas' || i.areaId === zonaFiltro))
     .sort((a, b) => Number(b.estado === 'pendiente') - Number(a.estado === 'pendiente'));
   const pendientes = abiertos.filter((i) => i.estado === 'pendiente');
 

@@ -2,7 +2,8 @@ import { UMBRAL_BAJO, UMBRAL_DESBORDE, UMBRAL_PRIORITARIO, UMBRAL_RIESGO_PROYECT
 import type { Contenedor, NivelLlenado } from '../types';
 import { horasHastaProximaRonda, proyectarNivel } from './llenado';
 
-export type MotivoPrioridad = 'llenado' | 'riesgo' | 'reporte';
+// "tiempo" (más de 48 h sin recolectar) solo lo calcula el backend
+export type MotivoPrioridad = 'llenado' | 'riesgo' | 'reporte' | 'tiempo';
 
 export function clasificarNivel(llenado: number): NivelLlenado {
   if (llenado >= UMBRAL_DESBORDE) return 'desborde';
@@ -41,18 +42,21 @@ export function motivoDePrioridad(
 }
 
 export function motivoDelContenedor(contenedor: Contenedor, hora: number, dia: number): MotivoPrioridad | null {
+  if (contenedor.motivo !== undefined) return contenedor.motivo; // ya lo decidió el backend
   return motivoDePrioridad(lecturaConfiable(contenedor), contenedor.velocidad, hora, dia, contenedor.reportesVecinales);
 }
 
 export function etiquetaMotivo(motivo: MotivoPrioridad): string {
   if (motivo === 'llenado') return 'Superó el 80%';
   if (motivo === 'riesgo') return 'Riesgo de desborde';
+  if (motivo === 'tiempo') return 'Más de 48 h sin recolectar';
   return 'Reporte vecinal';
 }
 
 // Nivel que se muestra en el mapa: un contenedor que todavía no llegó al 80%
 // pero corre riesgo de desbordar también se pinta como prioritario.
 export function nivelVisual(contenedor: Contenedor, hora: number, dia: number): NivelLlenado {
+  if (contenedor.nivel) return contenedor.nivel;
   const lectura = lecturaConfiable(contenedor);
   if (lectura >= UMBRAL_DESBORDE) return 'desborde';
   if (motivoDelContenedor(contenedor, hora, dia) !== null) return 'prioritario';

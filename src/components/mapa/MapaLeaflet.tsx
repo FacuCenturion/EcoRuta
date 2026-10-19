@@ -11,6 +11,7 @@ import {
   Tooltip,
   useMap,
 } from 'react-leaflet';
+import { useSimulacion } from '../../context/SimulacionContext';
 import { diaDeSemana } from '../../logic/llenado';
 import { motivoDelContenedor, nivelVisual } from '../../logic/prioridad';
 import { BORDE_ESTIMADO, BORDE_ZONA, COLOR_NIVEL, OPACIDAD_ZONA } from '../../utils/colores';
@@ -125,10 +126,16 @@ export default function MapaLeaflet({
             <br />
             Chofer: {camion.chofer}
             <br />
-            Zona {camion.zonaId}
+            <EtiquetaArea id={camion.areaId} />
           </Popup>
         </Marker>
       ))}
     </MapContainer>
   );
+}
+
+// El popup se dibuja dentro del árbol de React, así que puede leer el contexto
+function EtiquetaArea({ id }: { id: number }) {
+  const { nombreArea } = useSimulacion();
+  return <>{nombreArea(id)}</>;
 }

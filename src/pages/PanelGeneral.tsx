@@ -6,38 +6,31 @@ import MapaContenedores from '../components/MapaContenedores';
 import ParaRevisar from '../components/ParaRevisar';
 import Tarjeta from '../components/Tarjeta';
 import { useSimulacion } from '../context/SimulacionContext';
-import { ZONAS } from '../data/zonas';
-import {
-  avanceDeRuta,
-  contenedoresPrioritarios,
-  esAbierto,
-  kgCo2,
-} from '../logic/indicadores';
+import { avanceDeRuta, contenedoresPrioritarios, esAbierto, kgCo2 } from '../logic/indicadores';
 import { sensorConfiable } from '../logic/estadoSensor';
-import { obtenerHistorial } from '../logic/historial';
 import { formatearDecimal, formatearNumero } from '../utils/formato';
-import { vistaParaZona, zonasParaFiltro } from '../utils/vista';
 
 export default function PanelGeneral() {
-  const { estado, zonaFiltro } = useSimulacion();
+  const { estado, zonaFiltro, areas, palabraArea, vistaPara, contornosPara, estadisticas, fuente } = useSimulacion();
   const idZona = zonaFiltro === 'todas' ? undefined : zonaFiltro;
   const hora = new Date(estado.relojMs).getHours();
 
-  const contenedores = estado.contenedores.filter((c) => idZona === undefined || c.zonaId === idZona);
-  const camiones = estado.camiones.filter((c) => idZona === undefined || c.zonaId === idZona);
+  const contenedores = estado.contenedores.filter((c) => idZona === undefined || c.areaId === idZona);
+  const camiones = estado.camiones.filter((c) => idZona === undefined || c.areaId === idZona);
   const prioritarios = contenedoresPrioritarios(estado, idZona);
   const enRuta = camiones.filter((c) => c.estado === 'en_ruta' || c.estado === 'demorado');
   const enBase = camiones.filter((c) => c.estado === 'en_base').length;
   const enDescarga = camiones.filter((c) => c.estado === 'en_descarga').length;
-  const incidentes = estado.incidentes.filter((i) => idZona === undefined || i.zonaId === idZona);
+  const incidentes = estado.incidentes.filter((i) => idZona === undefined || i.areaId === idZona);
   const abiertos = incidentes.filter((i) => esAbierto(i.estado)).length;
   const pendientes = incidentes.filter((i) => i.estado === 'pendiente').length;
   const kmEvitados = estado.kmEvitadosHoy;
   const sensoresMidiendo = contenedores.filter((c) => sensorConfiable(c.estadoSensor)).length;
-  const porcentajeHecho = estado.planificadosHoy ? Math.round((estado.recolectadosHoy / estado.planificadosHoy) * 100) : 0;
+  const porcentajeHecho = estado.planificadosHoy
+    ? Math.round((estado.recolectadosHoy / estado.planificadosHoy) * 100)
+    : 0;
 
-  const historial = obtenerHistorial();
-  const datosHora = historial.llenadoPorHora.map((valor, h) => ({ hora: h, llenado: Math.round(valor) }));
+  const datosHora = estadisticas.llenadoPorHora.map((valor, h) => ({ hora: h, llenado: Math.round(valor) }));
   const picoHora = datosHora.reduce((mayor, d) => (d.llenado > mayor.llenado ? d : mayor), datosHora[0]).hora;
 
   return (
@@ -90,8 +83,8 @@ export default function PanelGeneral() {
             contenedores={contenedores}
             camiones={camiones}
             relojMs={estado.relojMs}
-            vista={vistaParaZona(zonaFiltro)}
-            zonas={zonasParaFiltro(zonaFiltro)}
+            vista={vistaPara(zonaFiltro)}
+            zonas={contornosPara(zonaFiltro)}
           />
           <p className="nota">
             {formatearNumero(sensoresMidiendo)} de {formatearNumero(contenedores.length)} sensores midiendo (datos
@@ -105,15 +98,15 @@ export default function PanelGeneral() {
       <div className="grilla-panel grilla-panel--abajo">
         <section className="panel" aria-labelledby="titulo-zonas">
           <div className="panel__cabecera">
-            <h2 id="titulo-zonas">Estado por zona</h2>
-            <span className="nota">Empresas recolectoras</span>
+            <h2 id="titulo-zonas">Estado por {palabraArea.toLowerCase()}</h2>
+            <span className="nota">{fuente === 'api' ? `Zona 1, ${areas[0]?.empresa}` : 'Empresas recolectoras'}</span>
           </div>
           <div className="tabla-scroll">
             <table className="tabla">
               <thead>
                 <tr>
-                  <th>Zona</th>
-                  <th>Empresa</th>
+                  <th>{palabraArea}</th>
+                  <th>{fuente === 'api' ? 'Barrios' : 'Empresa'}</th>
                   <th>Avance de ruta</th>
                   <th>Prioritarios</th>
                   <th>Incidentes</th>
@@ -121,15 +114,26 @@ export default function PanelGeneral() {
                 </tr>
               </thead>
               <tbody>
-                {ZONAS.map((zona) => {
-                  const camion = estado.camiones.find((c) => c.zonaId === zona.id);
-                  const avance = camion ? avanceDeRuta(camion) : { hechas: 0, total: 0 };
+                {areas.map((zona) => {
+                  // Un sector puede tener más de un camión: se suma el avance de todos
+                  const avance = estado.camiones
+                    .filter((c) => c.areaId === zona.id)
+                    .map(avanceDeRuta)
+                    .reduce((suma, a) => ({ hechas: suma.hechas + a.hechas, total: suma.total + a.total }), {
+                      hechas: 0,
+                      total: 0,
+                    });
                   const porcentaje = avance.total ? Math.round((avance.hechas / avance.total) * 100) : 0;
-                  const abiertosZona = estado.incidentes.filter((i) => i.zonaId === zona.id && esAbierto(i.estado)).length;
+                  const abiertosZona = estado.incidentes.filter(
+                    (i) => i.areaId === zona.id && esAbierto(i.estado),
+                  ).length;
+                  const eficiencia = estadisticas.eficienciaPorArea[zona.id];
                   return (
                     <tr key={zona.id} className={zona.id === idZona ? 'tabla__fila--activa' : undefined}>
-                      <th scope="row">Zona {zona.id}</th>
-                      <td>{zona.empresa}</td>
+                      <th scope="row">
+                        {palabraArea} {zona.id}
+                      </th>
+                      <td>{fuente === 'api' ? zona.nombre : zona.empresa}</td>
                       <td>
                         <div className="avance">
                           <div className="avance__barra">
@@ -140,7 +144,7 @@ export default function PanelGeneral() {
                       </td>
                       <td>{contenedoresPrioritarios(estado, zona.id).length}</td>
                       <td>{abiertosZona}</td>
-                      <td>{Math.round(historial.eficienciaPorZona[zona.id])}</td>
+                      <td>{eficiencia == null ? '—' : Math.round(eficiencia)}</td>
                     </tr>
                   );
                 })}
@@ -154,7 +158,8 @@ export default function PanelGeneral() {
             <h2 id="titulo-hora">Llenado promedio por hora</h2>
           </div>
           <p className="nota">
-            El pico es a las {picoHora} h. Promedio de los últimos 30 días (simulado); la hora actual está resaltada.
+            El pico es a las {picoHora} h. Promedio de los últimos 30 días
+            {fuente === 'api' ? '' : ' (simulado)'}; la hora actual está resaltada.
           </p>
           <div className="grafico grafico--chico">
             <ResponsiveContainer width="100%" height="100%">

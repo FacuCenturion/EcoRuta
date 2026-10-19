@@ -2,35 +2,27 @@
 
 Estado: [x] hecho, [ ] pendiente.
 
-## Estado del trabajo (12/10/2026)
+## Estado del trabajo (19/10/2026)
 
-El panel web del gerente está completo y funciona con datos simulados. El backend tiene la base armada (tablas, datos de ejemplo, Swagger), pero todavía no tiene endpoints: el panel no lo usa. Lo que sigue es conectarlos (Sprint 3).
+El backend del panel está completo y el panel ya puede funcionar con él. Sin la variable `VITE_API_URL` el panel sigue con los datos simulados en el navegador, como se mostró en las Sprints 1 y 2, así `main` no cambia para quien no levante el backend.
 
 | Parte | Estado |
 | --- | --- |
 | Panel web del gerente (7 pantallas, mapas con las zonas oficiales) | Hecho, en `main` |
-| Pantalla de estado de sensores y detección de fallas | Hecho, en `main` |
-| Backend: proyecto, base de datos y datos de ejemplo | Hecho, en `main` |
-| Backend: login y endpoints para leer zonas, contenedores, camiones e incidentes | Hecho |
-| Backend: lecturas de sensores, prioridad, rutas a demanda e incidentes, con datos simulados por un emulador | Hecho |
-| Merge del backend a `main` y panel conectado | Pendiente, después del 13/10 |
-| Contenedores sobre la calle y rutas que sigan las calles | Sin empezar (Sprint 3 y 4) |
-| Tráfico y aviso al chofer | Sin empezar (Sprint 4) |
-| App del chofer | Sin empezar (Sprint 4, versión mínima) |
+| Backend del panel: login, sensores, prioridad, rutas a demanda, incidentes, indicadores | Hecho, en `main` |
+| Solo la zona 1: 180 contenedores reales de la planilla del GCBA, en 4 sectores con 5 camiones | Hecho, en `main` |
+| Simulación de sensores con todos los casos (fallas, trabado, eventos, reportes) | Hecho, en `main` |
+| Panel conectado al backend, con avisos en vivo (SSE) en lugar de preguntar cada tantos segundos | Hecho, rama `feature/conectar-panel` |
+| Rutas que siguen las calles (OSRM, sin Google) | Sin empezar |
+| App del chofer (web que se instala en el celular) | Sin empezar, se divide en mini sprints |
+| Demo publicada y cierre | Sin empezar |
 
-Para tener en cuenta:
+Decisiones tomadas:
 
-- La rama `develop` quedó atrás de `main`: el backend y los cambios de mapas entraron directo a `main`. Hay que decidir si se sigue usando `develop` (y actualizarla) o si se trabaja con ramas que salen de `main`.
-
-Plan por sprint:
-
-| Sprint | Qué deja | Estado |
-| --- | --- | --- |
-| 1 | Panel web con datos simulados | Terminada |
-| 2 | Base del backend, zonas oficiales en el mapa y estado de sensores | Se presenta el 13/10 |
-| 3 | El panel funciona con la API y la base de datos (parte central); contenedores ubicados sobre la calle | Próxima |
-| 4 | Rutas que siguen las calles y tráfico con Google, aviso al chofer y app del chofer mínima | Pendiente |
-| 5 | Indicadores desde la base, demo publicada y cierre | Pendiente |
+- La Sprint 3 es la última: lo que estaba en las Sprints 4 y 5 se hace ahora.
+- Sin clave de Google por ahora (para evitar gastos inesperados): mapa alternativo y rutas con OSRM.
+- Sin Firebase: el backend avisa por Server-Sent Events, al panel y después a la app del chofer.
+- Falta decidir con el equipo contra qué ruta fija se comparan los indicadores (ver `backend/README.md`, Indicadores).
 
 ## Fase 1: Base del proyecto
 
@@ -49,7 +41,7 @@ Plan por sprint:
 - [x] Simulación de llenado irregular (persona revolviendo)
 - [x] Historial simulado de 8 semanas para los indicadores
 - [x] Límites reales de las 7 zonas (unión de comunas, con los barrios de los datos abiertos del GCBA)
-- [ ] Contenedores sobre la calle: hoy aparecen dentro de las manzanas porque se ubican en una grilla que no mira las calles. Reemplazar las posiciones de ejemplo por las del dataset de contenedores de la Ciudad; si no alcanza, acercar cada punto a la calle más cercana (Roads API de Google). Entra como migración nueva del backend
+- [x] Contenedores sobre la calle: 180 contenedores de la zona 1 tomados de la planilla oficial del GCBA y ubicados con el normalizador de direcciones de la Ciudad (USIG). Migración `V7` del backend; con datos simulados en el navegador siguen las posiciones de ejemplo
 - [ ] Si la Dirección General nos pasa lecturas históricas, importarlas y comparar con el simulador
 
 ## Fase 3: Lógica del sistema
@@ -58,11 +50,11 @@ Plan por sprint:
 - [x] Rutas por zona con el vecino más cercano
 - [x] Detección de anomalías en el sensor
 - [x] Incidentes con confirmación del operador
-- [ ] Rutas por las calles: hoy se dibujan como líneas rectas entre paradas y cruzan por el medio de las casas. Pedir el recorrido a la Routes API de Google (devuelve el trazado, los km reales y la duración), guardarlo en la ruta y dibujarlo en el panel. Se hace junto con el tráfico (Sprint 4)
+- [ ] Rutas por las calles: hoy se dibujan como líneas rectas entre paradas y cruzan por el medio de las casas. Pedir el recorrido a OSRM (gratis, sin clave), guardarlo en la ruta y dibujarlo en el panel
 - [ ] Recalcular la ruta automáticamente cuando aparece un contenedor prioritario nuevo (Release 2)
 - [x] Detección de sensores con falla usando solo el nivel de llenado: sin señal, valor congelado y lecturas irregulares
 - [x] Nivel estimado para los contenedores con el sensor caído o trabado (se usa para priorizar)
-- [ ] Detectar el sensor que no baja después de una recolección confirmada (cuando exista la app del chofer)
+- [x] Detectar el sensor que no baja después de una recolección confirmada (estado `trabado`, en el backend)
 
 ## Fase 4: Pantallas del panel web
 
@@ -82,7 +74,7 @@ Plan por sprint:
 - [x] Zonas dibujadas en el mapa con su color (en Google Maps y en el mapa alternativo)
 - [x] Contenedores con nivel estimado marcados con borde punteado en los mapas
 - [ ] Estilo del mapa más claro, como en el Figma
-- [ ] Login real validado por el backend
+- [x] Login real validado por el backend (con `VITE_API_URL`)
 - [ ] Probar en celular y en distintos navegadores
 
 ## Fase 5: Backend
@@ -95,33 +87,32 @@ Plan por sprint:
 Sprint 3, un bloque por integrante:
 
 - [x] Bloque 1, login y datos (backend): login con JWT y roles; endpoints para leer zonas, contenedores, camiones e incidentes
-- [ ] Bloque 1, login y datos (front): el login del panel pasa a la API y se borran las contraseñas de `src/data/usuarios.ts`
+- [x] Bloque 1, login y datos (front): el login del panel pasa a la API. Las contraseñas de `src/data/usuarios.ts` quedan solo para el modo sin backend
 - [x] Bloque 2, sensores y prioridad: recibir lecturas, detectar anomalías y fallas de sensor, calcular la prioridad en el servidor
 - [x] Bloque 3, rutas a demanda: despacho automático y manual, con el orden de paradas por vecino más cercano
 - [x] Pronóstico de desborde con el patrón de llenado aprendido de cada contenedor (promedio por hora y día de la semana)
 - [x] Garantía de servicio: tiempo máximo de 48 horas sin recolectar y paradas de paso
-- [ ] En el front: mostrar el motivo `tiempo`, la hora estimada de desborde y las paradas de paso
-- [ ] En el front: adaptar los tipos a la API (fechas en texto ISO, `id` numérico en incidentes) y borrar `src/logic/`, que queda duplicada con el backend
+- [x] En el front: mostrar el motivo `tiempo` y los estados nuevos (sensor trabado, falla de sensor, desborde)
+- [ ] En el front: mostrar la hora estimada de desborde y marcar las paradas de paso
+- [x] En el front: adaptar las respuestas de la API a los tipos del panel (`src/api/adaptadores.ts`). `src/logic/` se queda para el modo sin backend; con backend se usa lo que ya calculó el servidor
 - [x] Bloque 4, incidentes y emulador (backend): confirmar y descartar incidentes, reportes vecinales, cierre automático; emulador de sensores y choferes dentro del backend
-- [ ] Bloque 4 (front): conectar `SimulacionContext` con la API, para que el panel deje de simular
+- [x] Bloque 4 (front): conectar `SimulacionContext` con la API, para que el panel deje de simular
+- [x] Avisos en vivo del backend al panel con Server-Sent Events (`GET /api/v1/eventos`): el panel pide los datos solo cuando algo cambió
 
-- [ ] Contenedores sobre la calle: reemplazar las posiciones de ejemplo por las del dataset de contenedores de la Ciudad (migración nueva)
 
-Sprint 4:
+Lo que falta de la Sprint 3 (antes estaba en las Sprints 4 y 5):
 
-- [ ] Rutas por las calles: pedir el recorrido a la Routes API de Google, guardarlo en la ruta y dibujarlo en el panel en lugar de las líneas rectas
-- [ ] Elegir la hora de salida con menos tráfico (Google Routes API, con una tabla simulada si no hay clave)
-- [ ] Notificación push al chofer cuando se le asigna una ruta (Firebase)
-- [ ] Endpoints de la app del chofer: registrar el celular, ver la ruta e iniciarla
+- [ ] Rutas por las calles con OSRM, guardadas en la ruta y dibujadas en el panel
+- [ ] Hora de salida con menos tráfico: con una tabla simulada por hora (sin Google por ahora)
+- [ ] Aviso al chofer cuando se le asigna una ruta, por el mismo canal de eventos (sin Firebase)
+- [ ] Endpoints de la app del chofer: ver la ruta, iniciarla, confirmar cada parada y reportar "no se pudo"
 - [ ] Aviso al operador si el chofer no inicia la ruta a los 10 minutos
+- [x] Indicadores calculados desde la base (resumen diario y ruta fija calculada con las mismas lecturas)
+- [ ] Decidir la ruta fija de referencia de los indicadores: 3 rondas por día o 1 ronda nocturna
 
-Sprint 5:
+## Fase 6: App del chofer (se divide en mini sprints)
 
-- [ ] Indicadores calculados desde la base
-
-## Fase 6: App del chofer (versión mínima en la Sprint 4)
-
-- [ ] Elegir la tecnología: React Native, Flutter o una web que se instala en el celular
+- [x] Elegir la tecnología: una web que se instala en el celular (PWA)
 - [ ] Recibir la notificación de ruta nueva y abrir la ruta
 - [ ] Pantalla "Tu ruta de hoy" con las paradas ordenadas
 - [ ] Navegación y confirmación de cada contenedor recolectado

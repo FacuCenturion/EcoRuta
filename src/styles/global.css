@@ -1672,3 +1672,18 @@ textarea {
   padding: 4px 10px;
   font-size: 12.5px;
 }
+
+.estado-sensor--trabado {
+  background: #6b5a3a;
+  color: #fff;
+}
+
+.revisar__icono--falla_sensor {
+  background: #9b4a36;
+  color: #fff;
+}
+
+.revisar__icono--desborde {
+  background: #3b2a12;
+  color: var(--ambar-claro);
+}

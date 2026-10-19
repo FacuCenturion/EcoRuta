@@ -11,7 +11,7 @@ export default function Incidentes() {
 
   const lista = estado.incidentes.filter(
     (i) =>
-      (zonaFiltro === 'todas' || i.zonaId === zonaFiltro) &&
+      (zonaFiltro === 'todas' || i.areaId === zonaFiltro) &&
       (estadoFiltro === 'todos' || i.estado === estadoFiltro) &&
       (tipoFiltro === 'todos' || i.tipo === tipoFiltro),
   );

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { IconoCampana } from './Iconos';
-import { ZONAS } from '../data/zonas';
 import { useSimulacion, type FiltroZona } from '../context/SimulacionContext';
 import { esAbierto } from '../logic/indicadores';
 import { formatearFechaLarga, formatearHora } from '../utils/formato';
@@ -23,7 +22,19 @@ export default function Encabezado({
   conSimulacion = true,
   acciones,
 }: Props) {
-  const { estado, zonaFiltro, cambiarZona, enPausa, alternarPausa, velocidad, cambiarVelocidad } = useSimulacion();
+  const {
+    estado,
+    zonaFiltro,
+    cambiarZona,
+    enPausa,
+    alternarPausa,
+    velocidad,
+    cambiarVelocidad,
+    conControles,
+    areas,
+    palabraArea,
+    aviso,
+  } = useSimulacion();
   const pendientes = estado.incidentes.filter((i) => i.estado === 'pendiente').length;
   const abiertos = estado.incidentes.filter((i) => esAbierto(i.estado)).length;
 
@@ -37,23 +48,28 @@ export default function Encabezado({
               ? `${formatearFechaLarga(estado.relojMs)}, ${formatearHora(estado.relojMs)}. Datos de sensores simulados, actualizados a las ${formatearHora(estado.relojMs)}.`
               : '')}
         </p>
+        {aviso && (
+          <p className="login__error" role="alert">
+            {aviso}
+          </p>
+        )}
       </div>
       <div className="encabezado__acciones">
         {conFiltroZona && (
           <select
-            aria-label="Filtrar por zona"
+            aria-label={`Filtrar por ${palabraArea.toLowerCase()}`}
             value={zonaFiltro}
             onChange={(e) => cambiarZona(e.target.value === 'todas' ? 'todas' : (Number(e.target.value) as FiltroZona))}
           >
-            <option value="todas">Todas las zonas</option>
-            {ZONAS.map((zona) => (
-              <option key={zona.id} value={zona.id}>
-                Zona {zona.id}
+            <option value="todas">{palabraArea === 'Zona' ? 'Todas las zonas' : 'Todos los sectores'}</option>
+            {areas.map((area) => (
+              <option key={area.id} value={area.id}>
+                {palabraArea === 'Zona' ? area.nombre : `${palabraArea} ${area.id}: ${area.nombre}`}
               </option>
             ))}
           </select>
         )}
-        {conSimulacion && (
+        {conSimulacion && conControles && (
           <div className="control-tiempo" role="group" aria-label="Control de la simulación">
             <button type="button" className="boton" onClick={alternarPausa}>
               {enPausa ? 'Reanudar' : 'Pausar'}

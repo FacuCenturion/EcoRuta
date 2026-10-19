@@ -7,12 +7,11 @@ import { diaDeSemana } from '../logic/llenado';
 import { etiquetaMotivo, lecturaConfiable, nivelVisual } from '../logic/prioridad';
 import Leyenda from '../components/Leyenda';
 import { COLOR_NIVEL } from '../utils/colores';
-import { vistaParaZona, zonasParaFiltro } from '../utils/vista';
 
 type Filtro = 'todos' | 'prioritarios';
 
 export default function MapaEnVivo() {
-  const { estado, zonaFiltro } = useSimulacion();
+  const { estado, zonaFiltro, vistaPara, contornosPara, nombreArea } = useSimulacion();
   const [filtro, setFiltro] = useState<Filtro>('todos');
   const [seleccionadoId, setSeleccionadoId] = useState<string>();
   const [foco, setFoco] = useState<Vista | null>(null);
@@ -23,10 +22,9 @@ export default function MapaEnVivo() {
   );
   const idsPrioritarios = new Set(prioritarios.map((p) => p.contenedor.id));
   const visibles = estado.contenedores.filter(
-    (c) =>
-      (idZona === undefined || c.zonaId === idZona) && (filtro === 'todos' || idsPrioritarios.has(c.id)),
+    (c) => (idZona === undefined || c.areaId === idZona) && (filtro === 'todos' || idsPrioritarios.has(c.id)),
   );
-  const camiones = estado.camiones.filter((c) => idZona === undefined || c.zonaId === idZona);
+  const camiones = estado.camiones.filter((c) => idZona === undefined || c.areaId === idZona);
 
   const fecha = new Date(estado.relojMs);
   const hora = fecha.getHours();
@@ -41,7 +39,10 @@ export default function MapaEnVivo() {
 
   return (
     <>
-      <Encabezado titulo="Mapa en vivo" subtitulo="Estado de cada contenedor según su último dato de sensor. Si el sensor falla, se muestra el nivel estimado." />
+      <Encabezado
+        titulo="Mapa en vivo"
+        subtitulo="Estado de cada contenedor según su último dato de sensor. Si el sensor falla, se muestra el nivel estimado."
+      />
       <div className="mapa-pagina">
         <section className="panel panel--mapa-grande" aria-label="Mapa">
           <div className="barra-filtros">
@@ -66,9 +67,9 @@ export default function MapaEnVivo() {
             contenedores={visibles}
             camiones={camiones}
             relojMs={estado.relojMs}
-            vista={foco ?? vistaParaZona(zonaFiltro)}
+            vista={foco ?? vistaPara(zonaFiltro)}
             seleccionadoId={seleccionadoId}
-            zonas={zonasParaFiltro(zonaFiltro)}
+            zonas={contornosPara(zonaFiltro)}
           />
         </section>
 
@@ -95,7 +96,7 @@ export default function MapaEnVivo() {
                     <span className="fila-boton__texto">
                       <strong>{contenedor.direccion}</strong>
                       <small>
-                        Zona {contenedor.zonaId} · {etiquetaMotivo(motivo)}
+                        {nombreArea(contenedor.areaId)} · {etiquetaMotivo(motivo)}
                         {contenedor.nivelEstimado !== undefined && ' · nivel estimado'}
                       </small>
                     </span>

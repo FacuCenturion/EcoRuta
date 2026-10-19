@@ -1,7 +1,7 @@
 import { Area, ComposedChart, Line, ReferenceArea, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { HORAS_DE_HISTORIAL } from '../config';
 import { curvaEstimada, ultimaLecturaValida } from '../logic/estadoSensor';
-import type { Contenedor } from '../types';
+import type { Contenedor, LecturaSensor } from '../types';
 import { formatearHora } from '../utils/formato';
 
 interface Punto {
@@ -12,21 +12,28 @@ interface Punto {
 
 // Curva de llenado de las últimas 24 h. Si no se puede confiar en el sensor,
 // el tramo sin datos buenos se sombrea y el nivel estimado va punteado.
-export default function CurvaSensor({ contenedor, relojMs }: { contenedor: Contenedor; relojMs: number }) {
+// Con backend la curva estimada viene calculada (estimadas); si no, se calcula acá.
+export default function CurvaSensor({
+  contenedor,
+  relojMs,
+  estimadas,
+}: {
+  contenedor: Contenedor;
+  relojMs: number;
+  estimadas?: LecturaSensor[];
+}) {
   const desde = relojMs - HORAS_DE_HISTORIAL * 60 * 60 * 1000;
   const conEstimacion = contenedor.nivelEstimado !== undefined;
 
-  const puntos: Punto[] = contenedor.historial
-    .filter((l) => l.ms >= desde)
-    .map((l) => ({ ms: l.ms, medido: l.nivel }));
+  const puntos: Punto[] = contenedor.historial.filter((l) => l.ms >= desde).map((l) => ({ ms: l.ms, medido: l.nivel }));
   if (conEstimacion) {
-    curvaEstimada(contenedor, relojMs)
+    (estimadas ?? curvaEstimada(contenedor, relojMs))
       .filter((l) => l.ms >= desde)
       .forEach((l) => puntos.push({ ms: l.ms, estimado: l.nivel }));
     puntos.sort((a, b) => a.ms - b.ms);
   }
   // El tramo gris arranca cuando el sensor dejó de dar datos buenos
-  const ultimaBuena = ultimaLecturaValida(contenedor)?.ms ?? relojMs;
+  const ultimaBuena = estimadas?.[0]?.ms ?? ultimaLecturaValida(contenedor)?.ms ?? relojMs;
   const inicioSinDatos = conEstimacion ? Math.max(desde, ultimaBuena) : undefined;
 
   return (

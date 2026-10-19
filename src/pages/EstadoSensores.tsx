@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import CurvaSensor from '../components/CurvaSensor';
 import Encabezado from '../components/Encabezado';
-import { useSimulacion } from '../context/SimulacionContext';
+import { useSimulacion, type Curva } from '../context/SimulacionContext';
 import { DETALLE_ESTADO_SENSOR, ETIQUETA_ESTADO_SENSOR, resumenSensores } from '../logic/estadoSensor';
 import { lecturaConfiable } from '../logic/prioridad';
 import type { Contenedor, EstadoSensor } from '../types';
@@ -11,13 +11,15 @@ import { formatearHaceCuanto, formatearHora } from '../utils/formato';
 type Filtro = 'con_falla' | 'todos' | EstadoSensor;
 
 // Orden de la lista: primero lo más grave
-const ESTADOS: EstadoSensor[] = ['sin_senal', 'congelado', 'irregular', 'funcionando'];
+const ESTADOS: EstadoSensor[] = ['sin_senal', 'trabado', 'congelado', 'irregular', 'funcionando'];
 
 const QUE_HACER: Record<EstadoSensor, string> = {
   sin_senal:
     'Pedirle a la empresa de la zona que revise el sensor. Mientras tanto el contenedor se prioriza con el nivel estimado.',
   congelado:
     'Pedir revisión del sensor. Si el chofer vacía el contenedor y el valor no cambia, queda confirmado que está trabado.',
+  trabado:
+    'Pedir revisión del sensor: el chofer confirmó que lo vació y el sensor no se enteró. Se prioriza con el nivel estimado.',
   irregular: 'El sensor anda, pero alguien puede estar revolviendo la basura. Revisar el incidente.',
   funcionando: 'No hay nada pendiente con este sensor.',
 };
@@ -33,13 +35,23 @@ function EstadoChip({ estado }: { estado: EstadoSensor }) {
 }
 
 export default function EstadoSensores() {
-  const { estado, zonaFiltro } = useSimulacion();
+  const { estado, zonaFiltro, palabraArea, nombreArea, pedirCurva, fuente } = useSimulacion();
+  // El simulador del navegador no tiene sensores trabados: el botón aparece solo con backend
+  const estados = fuente === 'api' ? ESTADOS : ESTADOS.filter((e) => e !== 'trabado');
   const [filtro, setFiltro] = useState<Filtro>('con_falla');
   const [elegidoId, setElegidoId] = useState<string>();
 
-  const contenedores = estado.contenedores.filter((c) => zonaFiltro === 'todas' || c.zonaId === zonaFiltro);
+  const contenedores = estado.contenedores.filter((c) => zonaFiltro === 'todas' || c.areaId === zonaFiltro);
   const resumen = resumenSensores(contenedores);
   const conFalla = resumen.total - resumen.porEstado.funcionando;
+  const alcance =
+    zonaFiltro === 'todas'
+      ? palabraArea === 'Zona'
+        ? 'de la Ciudad'
+        : 'de la zona 1'
+      : palabraArea === 'Zona'
+        ? `de la zona ${zonaFiltro}`
+        : `del sector ${zonaFiltro}`;
 
   const lista = contenedores
     .filter((c) => coincide(c, filtro))
@@ -48,6 +60,20 @@ export default function EstadoSensores() {
         ESTADOS.indexOf(a.estadoSensor) - ESTADOS.indexOf(b.estadoSensor) || a.ultimaLecturaMs - b.ultimaLecturaMs,
     );
   const elegido = lista.find((c) => c.id === elegidoId) ?? lista[0];
+
+  // Con backend, la curva de 24 h se pide solo para el sensor elegido, y de nuevo cada vez que hay datos nuevos
+  const [curva, setCurva] = useState<{ id: string } & Curva>();
+  useEffect(() => {
+    if (!pedirCurva || !elegido) return;
+    let vigente = true;
+    pedirCurva(elegido.id)
+      .then((nueva) => vigente && setCurva({ id: elegido.id, ...nueva }))
+      .catch(() => vigente && setCurva(undefined));
+    return () => {
+      vigente = false;
+    };
+  }, [pedirCurva, elegido?.id, estado.relojMs]);
+  const curvaElegida = curva && curva.id === elegido?.id ? curva : undefined;
 
   return (
     <>
@@ -59,13 +85,16 @@ export default function EstadoSensores() {
       <section className="panel sensores-resumen" aria-labelledby="titulo-resumen-sensores">
         <div className="sensores-resumen__cifra">
           <strong>{resumen.porcentajeOperativo}%</strong>
-          <span id="titulo-resumen-sensores">
-            de los sensores {zonaFiltro === 'todas' ? 'de la Ciudad' : `de la zona ${zonaFiltro}`} están midiendo
-          </span>
+          <span id="titulo-resumen-sensores">de los sensores {alcance} están midiendo</span>
         </div>
 
-        <div className="barra-estados" role="img" aria-label={`${resumen.total} sensores, ${conFalla} con alguna falla`}>
-          {ESTADOS.slice()
+        <div
+          className="barra-estados"
+          role="img"
+          aria-label={`${resumen.total} sensores, ${conFalla} con alguna falla`}
+        >
+          {estados
+            .slice()
             .reverse()
             .map((e) =>
               resumen.porEstado[e] > 0 ? (
@@ -89,7 +118,7 @@ export default function EstadoSensores() {
           >
             Con alguna falla <strong>{conFalla}</strong>
           </button>
-          {ESTADOS.map((e) => (
+          {estados.map((e) => (
             <button
               key={e}
               type="button"
@@ -126,7 +155,7 @@ export default function EstadoSensores() {
                 <thead>
                   <tr>
                     <th>Contenedor</th>
-                    <th>Zona</th>
+                    <th>{palabraArea}</th>
                     <th>Estado</th>
                     <th>Última lectura</th>
                     <th>Nivel</th>
@@ -146,7 +175,7 @@ export default function EstadoSensores() {
                           <small>{c.id}</small>
                         </button>
                       </th>
-                      <td>{c.zonaId}</td>
+                      <td>{c.areaId}</td>
                       <td>
                         <EstadoChip estado={c.estadoSensor} />
                       </td>
@@ -169,7 +198,7 @@ export default function EstadoSensores() {
               <div>
                 <h2 id="titulo-detalle-sensor">{elegido.direccion}</h2>
                 <span className="nota">
-                  Zona {elegido.zonaId}, contenedor {elegido.id}
+                  {nombreArea(elegido.areaId)}, contenedor {elegido.id}
                 </span>
               </div>
               <EstadoChip estado={elegido.estadoSensor} />
@@ -177,7 +206,15 @@ export default function EstadoSensores() {
 
             <p className="detalle-sensor__motivo">{DETALLE_ESTADO_SENSOR[elegido.estadoSensor]}.</p>
 
-            <CurvaSensor contenedor={elegido} relojMs={estado.relojMs} />
+            {pedirCurva && !curvaElegida ? (
+              <p className="nota grafico grafico--sensor">Cargando la curva del sensor…</p>
+            ) : (
+              <CurvaSensor
+                contenedor={curvaElegida ? { ...elegido, historial: curvaElegida.historial } : elegido}
+                estimadas={curvaElegida?.estimadas}
+                relojMs={estado.relojMs}
+              />
+            )}
             <ul className="leyenda">
               <li>
                 <span className="leyenda__cuadrito" style={{ background: '#c9d6bd' }} />
