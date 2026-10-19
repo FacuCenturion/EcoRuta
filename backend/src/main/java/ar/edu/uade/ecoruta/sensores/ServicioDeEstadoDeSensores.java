@@ -92,6 +92,20 @@ public class ServicioDeEstadoDeSensores {
     // Se parte de la última lectura que todavía sirve y se le suma lo que se habría llenado
     // desde entonces. Si después un chofer lo vació, se parte de esa recolección.
     private int estimarNivel(Contenedor contenedor, String estado, Instant ahora) {
+        Partida partida = puntoDePartida(contenedor, estado);
+        return (int) Math.round(ModeloDeLlenado.proyectarEntre(partida.nivel(), patrones.ritmoDe(contenedor),
+                partida.momento(), ahora));
+    }
+
+    /** Desde dónde se estima: el último dato que todavía sirve. */
+    public record Partida(Instant momento, double nivel) {
+    }
+
+    /** Un punto de la curva estimada, para dibujarla junto a las lecturas. */
+    public record PuntoEstimado(Instant momento, int nivel) {
+    }
+
+    private Partida puntoDePartida(Contenedor contenedor, String estado) {
         Instant partida = contenedor.getUltimaLecturaAt().toInstant();
         if (estado.equals(CONGELADO)) {
             Instant inicio = lecturas.inicioDeLaRacha(contenedor.getId(), contenedor.getLlenado());
@@ -106,6 +120,26 @@ public class ServicioDeEstadoDeSensores {
             partida = contenedor.getUltimaRecoleccionAt().toInstant();
             nivel = Parametros.NIVEL_TRAS_RECOLECCION;
         }
-        return (int) Math.round(ModeloDeLlenado.proyectarEntre(nivel, patrones.ritmoDe(contenedor), partida, ahora));
+        return new Partida(partida, nivel);
+    }
+
+    /**
+     * La curva del nivel estimado, cada media hora desde el último dato que sirve hasta ahora.
+     * Vacía si el sensor es confiable (no hay nada que estimar).
+     */
+    public java.util.List<PuntoEstimado> curvaEstimada(Contenedor contenedor, Instant ahora) {
+        if (esConfiable(contenedor.getEstadoSensor()) || contenedor.getUltimaLecturaAt() == null) {
+            return java.util.List.of();
+        }
+        Partida partida = puntoDePartida(contenedor, contenedor.getEstadoSensor());
+        var ritmo = patrones.ritmoDe(contenedor);
+        java.util.List<PuntoEstimado> puntos = new java.util.ArrayList<>();
+        for (Instant momento = partida.momento(); momento.isBefore(ahora); momento = momento.plus(Duration.ofMinutes(30))) {
+            puntos.add(new PuntoEstimado(momento,
+                    (int) Math.round(ModeloDeLlenado.proyectarEntre(partida.nivel(), ritmo, partida.momento(), momento))));
+        }
+        puntos.add(new PuntoEstimado(ahora,
+                (int) Math.round(ModeloDeLlenado.proyectarEntre(partida.nivel(), ritmo, partida.momento(), ahora))));
+        return puntos;
     }
 }

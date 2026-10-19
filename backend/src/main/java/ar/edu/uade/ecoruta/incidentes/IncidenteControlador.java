@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 import ar.edu.uade.ecoruta.auth.Usuario;
 import ar.edu.uade.ecoruta.auth.UsuarioRepositorio;
 import ar.edu.uade.ecoruta.comun.RelojDelSistema;
+import ar.edu.uade.ecoruta.comun.error.RecursoNoEncontradoException;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -54,6 +55,12 @@ public class IncidenteControlador {
             @RequestParam(required = false) Integer sectorId, @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String estado) {
         return incidentes.buscar(zonaId, sectorId, tipo, estado).stream().map(IncidenteDto::de).toList();
+    }
+
+    @GetMapping("/incidentes/{id}")
+    public IncidenteDto buscar(@PathVariable long id) {
+        return incidentes.conDetalle(id).map(IncidenteDto::de).orElseThrow(
+                () -> new RecursoNoEncontradoException("INCIDENTE_NO_EXISTE", "No existe el incidente " + id + "."));
     }
 
     /** El operador confirma o descarta. Queda guardado quién lo decidió y cuándo. */

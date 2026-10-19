@@ -146,17 +146,21 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | GET | `/contenedores` | Contenedores con dirección, barrio, tipo, llenado, nivel, motivo de prioridad, estado del sensor y hora estimada de desborde. Filtros: `zonaId`, `sectorId` |
 | GET | `/contenedores/prioritarios` | Los que hay que ir a buscar, del más lleno al menos lleno. Filtro: `zonaId` |
 | GET | `/contenedores/{id}` | Un contenedor |
-| GET | `/contenedores/{id}/lecturas` | Lecturas del sensor para dibujar la curva. Parámetro: `horas` (24 por defecto) |
+| GET | `/contenedores/{id}/lecturas` | Lecturas del sensor. Parámetro: `horas` (24 por defecto) |
+| GET | `/contenedores/{id}/curva` | Lo que dibuja Estado de sensores: las lecturas y, si el sensor falla, la curva del nivel estimado |
 | POST | `/lecturas` | Entrada de los sensores reales. Usa el header `X-Api-Key` en vez de token |
-| GET | `/camiones` | Camiones con chofer, estado, posición y las paradas de su ruta. Filtro: `zonaId` |
+| GET | `/camiones` | Camiones con chofer, estado, posición y las paradas de su ruta. Filtros: `zonaId`, `sectorId` |
+| GET | `/camiones/{id}` | Un camión con su ruta más nueva |
 | GET | `/rutas` | Rutas del día. Filtros: `zonaId`, `estado` |
 | GET | `/rutas/{id}` | Una ruta con sus paradas |
 | POST | `/rutas/planificar` | Despacho manual: manda ahora el camión de un sector. Body: `sectorId` |
-| GET | `/incidentes` | Incidentes. Filtros: `zonaId`, `tipo`, `estado` |
+| GET | `/incidentes` | Incidentes. Filtros: `zonaId`, `sectorId`, `tipo`, `estado` |
+| GET | `/incidentes/{id}` | Un incidente |
 | POST | `/incidentes/{id}/decision` | El operador confirma o descarta. Body: `decision` |
 | GET | `/reportes-vecinales` | Los incidentes que vienen de vecinos. Filtros: `zonaId`, `estado` |
 | POST | `/reportes-vecinales` | Carga un reporte. Body: `contenedorId`, `comentario` |
-| GET | `/panel/resumen` | Los números del día: recolectados, km evitados, prioritarios, sensores por estado. Filtro: `zonaId` |
+| GET | `/panel/resumen` | Los números del Panel general: recolectados y planificados hoy, km evitados, prioritarios, desbordados, incidentes abiertos y pendientes, camiones por estado, sensores por estado, llenado por hora y hora pico. Filtros: `zonaId`, `sectorId` |
+| GET | `/panel/sectores` | La tabla por sector del Panel general: avance de cada camión, prioritarios, desbordados, incidentes, llenado promedio, sensores con falla y eficiencia |
 | GET | `/indicadores` | Solo el director. Km, desbordes y visitas de la ruta dinámica contra una ruta fija, eficiencia por sector, llenado por hora y mapa de calor. Filtros: `sectorId`, `dias` (30 por defecto) |
 | GET | `/simulacion` | Hora del sistema y si la simulación está en pausa |
 | POST | `/simulacion` | Pausar o acelerar la demo. Body: `enPausa`, `velocidad` (1 a 20) |

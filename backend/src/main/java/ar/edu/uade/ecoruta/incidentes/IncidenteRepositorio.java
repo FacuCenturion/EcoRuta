@@ -25,6 +25,11 @@ public interface IncidenteRepositorio extends JpaRepository<Incidente, Long> {
             @Param("tipo") String tipo, @Param("estado") String estado);
 
     @Query("""
+            SELECT i FROM Incidente i LEFT JOIN FETCH i.contenedor LEFT JOIN FETCH i.camion WHERE i.id = :id
+            """)
+    java.util.Optional<Incidente> conDetalle(@Param("id") long id);
+
+    @Query("""
             SELECT i FROM Incidente i LEFT JOIN FETCH i.contenedor
             WHERE i.estado IN ('pendiente', 'confirmado')
             """)

@@ -7,6 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CamionRepositorio extends JpaRepository<Camion, String> {
 
+    @Override
+    @EntityGraph(attributePaths = "chofer")
+    java.util.Optional<Camion> findById(String id);
+
     // El chofer se trae en la misma consulta para no hacer una por camión
     @EntityGraph(attributePaths = "chofer")
     List<Camion> findAllByOrderBySectorId();

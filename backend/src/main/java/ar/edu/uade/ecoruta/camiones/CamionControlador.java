@@ -6,10 +6,12 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import ar.edu.uade.ecoruta.comun.error.RecursoNoEncontradoException;
 import ar.edu.uade.ecoruta.rutas.Ruta;
 import ar.edu.uade.ecoruta.rutas.RutaRepositorio;
 
@@ -23,6 +25,14 @@ public class CamionControlador {
     CamionControlador(CamionRepositorio camiones, RutaRepositorio rutas) {
         this.camiones = camiones;
         this.rutas = rutas;
+    }
+
+    /** Un camión con su ruta más nueva. */
+    @GetMapping("/{id}")
+    CamionDto buscar(@PathVariable String id) {
+        Camion camion = camiones.findById(id).orElseThrow(
+                () -> new RecursoNoEncontradoException("CAMION_NO_EXISTE", "No existe el camión " + id + "."));
+        return CamionDto.de(camion, rutas.ultimaDelCamion(id).orElse(null));
     }
 
     @GetMapping

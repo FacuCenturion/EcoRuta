@@ -18,6 +18,7 @@ import ar.edu.uade.ecoruta.comun.RelojDelSistema;
 import ar.edu.uade.ecoruta.comun.error.RecursoNoEncontradoException;
 import ar.edu.uade.ecoruta.contenedores.Prioridad.Evaluacion;
 import ar.edu.uade.ecoruta.sensores.RepositorioDeLecturas;
+import ar.edu.uade.ecoruta.sensores.ServicioDeEstadoDeSensores;
 
 @RestController
 @RequestMapping("/api/v1/contenedores")
@@ -26,13 +27,24 @@ public class ContenedorControlador {
     record LecturaDto(OffsetDateTime medidoAt, int llenado) {
     }
 
+    /**
+     * Lo que dibuja la pantalla Estado de sensores para un contenedor.
+     *
+     * @param estimadas la curva del nivel estimado (cada media hora); vacía si el sensor funciona
+     */
+    record CurvaDto(String contenedorId, String estadoSensor, Integer nivelEstimado, List<LecturaDto> lecturas,
+            List<LecturaDto> estimadas) {
+    }
+
     private final ContenedorRepositorio contenedores;
     private final ServicioDePrioridad prioridad;
     private final RepositorioDeLecturas lecturas;
     private final RelojDelSistema reloj;
+    private final ServicioDeEstadoDeSensores estadoDeSensores;
 
     ContenedorControlador(ContenedorRepositorio contenedores, ServicioDePrioridad prioridad,
-            RepositorioDeLecturas lecturas, RelojDelSistema reloj) {
+            RepositorioDeLecturas lecturas, RelojDelSistema reloj, ServicioDeEstadoDeSensores estadoDeSensores) {
+        this.estadoDeSensores = estadoDeSensores;
         this.contenedores = contenedores;
         this.prioridad = prioridad;
         this.lecturas = lecturas;
@@ -72,6 +84,18 @@ public class ContenedorControlador {
         return lecturas.historial(id, desde).stream()
                 .map(l -> new LecturaDto(Fechas.enBuenosAires(l.medidoAt()), l.llenado()))
                 .toList();
+    }
+
+    /** Lecturas del sensor y, si falla, la curva del nivel estimado. Por defecto, las últimas 24 horas. */
+    @GetMapping("/{id}/curva")
+    CurvaDto curva(@PathVariable String id, @RequestParam(defaultValue = "24") int horas) {
+        Contenedor contenedor = buscarPorId(id);
+        Instant ahora = reloj.ahora();
+        List<LecturaDto> medidas = lecturas(id, horas);
+        List<LecturaDto> estimadas = estadoDeSensores.curvaEstimada(contenedor, ahora).stream()
+                .map(p -> new LecturaDto(Fechas.enBuenosAires(p.momento()), p.nivel()))
+                .toList();
+        return new CurvaDto(id, contenedor.getEstadoSensor(), contenedor.getNivelEstimado(), medidas, estimadas);
     }
 
     private List<Contenedor> buscar(Integer zonaId, Integer sectorId) {

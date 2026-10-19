@@ -185,6 +185,44 @@ public class ServicioDeIndicadores {
         return resultado;
     }
 
+    // ---------- Lo que usa el Panel general (liviano: solo días ya resumidos) ----------
+
+    /** Eficiencia de cada sector en los últimos días: de cada 100 vaciados, cuántos en el momento justo. */
+    @Transactional(readOnly = true)
+    public Map<Integer, Double> eficienciaPorSector(int dias, Instant ahora) {
+        LocalDate desde = ahora.atZone(Fechas.BUENOS_AIRES).toLocalDate().minusDays(dias);
+        Map<Integer, Double> resultado = new LinkedHashMap<>();
+        resumenes.desde(desde, null).stream()
+                .collect(Collectors.groupingBy(Resumen::sectorId, java.util.TreeMap::new, Collectors.toList()))
+                .forEach((sector, lista) -> {
+                    int visitas = lista.stream().mapToInt(Resumen::visitas).sum();
+                    resultado.put(sector, visitas == 0 ? 0
+                            : redondear(100.0 * lista.stream().mapToInt(Resumen::visitasJustas).sum() / visitas));
+                });
+        return resultado;
+    }
+
+    /** Llenado promedio en cada hora del día, en los últimos días (24 valores). */
+    @Transactional(readOnly = true)
+    public double[] llenadoPorHora(Integer sectorId, int dias, Instant ahora) {
+        LocalDate desde = ahora.atZone(Fechas.BUENOS_AIRES).toLocalDate().minusDays(dias);
+        double[] suma = new double[24];
+        int[] cuenta = new int[24];
+        for (Resumen r : resumenes.desde(desde, sectorId)) {
+            for (int h = 0; h < 24; h++) {
+                if (r.llenadoPorHora()[h] > 0) {
+                    suma[h] += r.llenadoPorHora()[h];
+                    cuenta[h]++;
+                }
+            }
+        }
+        double[] promedio = new double[24];
+        for (int h = 0; h < 24; h++) {
+            promedio[h] = cuenta[h] == 0 ? 0 : redondear(suma[h] / cuenta[h]);
+        }
+        return promedio;
+    }
+
     // ---------- Indicadores para el panel ----------
 
     /**

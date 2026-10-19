@@ -38,6 +38,13 @@ public interface RutaRepositorio extends JpaRepository<Ruta, Long> {
             """)
     Optional<Ruta> conParadas(@Param("id") long id);
 
+    @Query("""
+            SELECT DISTINCT r FROM Ruta r
+            JOIN FETCH r.camion k LEFT JOIN FETCH r.paradas p LEFT JOIN FETCH p.contenedor
+            WHERE r.id = (SELECT max(r2.id) FROM Ruta r2 WHERE r2.camion.id = :camionId)
+            """)
+    Optional<Ruta> ultimaDelCamion(@Param("camionId") String camionId);
+
     /** La ruta más nueva de cada camión: la que muestra el panel en "Rutas y camiones". */
     @Query("""
             SELECT DISTINCT r FROM Ruta r
