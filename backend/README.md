@@ -166,6 +166,9 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | POST | `/simulacion` | Pausar o acelerar la demo. Body: `enPausa`, `velocidad` (1 a 20) |
 | POST | `/simulacion/reiniciar` | Solo el director. Vuelve la demo al punto de partida |
 | POST | `/simulacion/casos` | Dispara un caso de la simulación para la demo (ver arriba) |
+| GET | `/eventos` | Avisos en vivo (Server-Sent Events): evento `actualizacion` cada vez que algo cambió, como mucho uno por segundo |
+
+**Avisos en vivo.** El panel no pregunta cada tantos segundos: abre `/eventos` una vez y el servidor le avisa cuando hay datos nuevos (después de cada paso del emulador y de cualquier pedido que cambie algo). El aviso solo trae la hora del sistema; al recibirlo, el panel vuelve a pedir lo que muestra. Varios cambios seguidos se juntan en un solo aviso por segundo, así a velocidad 20 el panel no pide todo cinco veces por segundo. Usa el mismo token que el resto, en el header `Authorization` (por eso el panel no usa `EventSource`, que no deja mandar headers). Para verlo desde la terminal: `curl -N http://localhost:8080/api/v1/eventos -H "Authorization: Bearer $TOKEN"`.
 
 Para probarlos desde Swagger: llamar a `/auth/login`, copiar el `token` de la respuesta y pegarlo con el botón **Authorize**. Desde la terminal:
 

@@ -13,6 +13,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
@@ -85,6 +86,12 @@ public class ManejadorDeErrores {
     @ExceptionHandler(EstadoInvalidoException.class)
     ResponseEntity<ErrorApi> estadoInvalido(EstadoInvalidoException ex) {
         return responder(HttpStatus.CONFLICT, ex.getCodigo(), ex.getMessage());
+    }
+
+    // Un panel cerró la conexión de /eventos mientras se le mandaba un aviso: no hay a quién responder
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    void conexionCerrada(AsyncRequestNotUsableException ex) {
+        log.debug("Se cerró una conexión de avisos: {}", ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

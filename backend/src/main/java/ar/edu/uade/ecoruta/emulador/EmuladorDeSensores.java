@@ -31,6 +31,7 @@ import ar.edu.uade.ecoruta.comun.error.RecursoNoEncontradoException;
 import ar.edu.uade.ecoruta.contenedores.Contenedor;
 import ar.edu.uade.ecoruta.contenedores.ContenedorRepositorio;
 import ar.edu.uade.ecoruta.contenedores.ServicioDePrioridad;
+import ar.edu.uade.ecoruta.eventos.CanalDeEventos;
 import ar.edu.uade.ecoruta.incidentes.ServicioDeIncidentes;
 import ar.edu.uade.ecoruta.rutas.Parada;
 import ar.edu.uade.ecoruta.rutas.PlanificadorDeRutas;
@@ -109,6 +110,7 @@ public class EmuladorDeSensores {
     private final MundoSimulado mundo;
     private final HistorialDeIndicadores historialDeIndicadores;
     private final TransactionTemplate transaccion;
+    private final CanalDeEventos eventos;
     private final boolean automatico;
 
     // Lo que solo conoce el emulador
@@ -134,6 +136,7 @@ public class EmuladorDeSensores {
             ServicioDeEstadoDeSensores estadoDeSensores, ServicioDeIncidentes incidentes, ServicioDePrioridad prioridad,
             ServicioDeDespacho despacho, ServicioDeRutas servicioDeRutas, HistorialInicial historialInicial,
             MundoSimulado mundo, HistorialDeIndicadores historialDeIndicadores, TransactionTemplate transaccion,
+            CanalDeEventos eventos,
             @Value("${ecoruta.emulador.automatico:true}") boolean automatico) {
         this.reloj = reloj;
         this.contenedores = contenedores;
@@ -150,6 +153,7 @@ public class EmuladorDeSensores {
         this.mundo = mundo;
         this.historialDeIndicadores = historialDeIndicadores;
         this.transaccion = transaccion;
+        this.eventos = eventos;
         this.automatico = automatico;
     }
 
@@ -237,6 +241,7 @@ public class EmuladorDeSensores {
             proximoPasoMs = System.currentTimeMillis() + MS_REALES_POR_PASO / reloj.velocidad();
             try {
                 transaccion.executeWithoutResult(estado -> avanzar());
+                eventos.avisar();
             } catch (RuntimeException ex) {
                 log.error("El emulador no pudo completar el paso {}", paso, ex);
             }
