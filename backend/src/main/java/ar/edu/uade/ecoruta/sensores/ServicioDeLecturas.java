@@ -17,6 +17,7 @@ import ar.edu.uade.ecoruta.contenedores.Contenedor;
 import ar.edu.uade.ecoruta.contenedores.ContenedorRepositorio;
 import ar.edu.uade.ecoruta.contenedores.PatronesDeLlenado;
 import ar.edu.uade.ecoruta.incidentes.ServicioDeIncidentes;
+import ar.edu.uade.ecoruta.indicadores.ServicioDeIndicadores;
 
 /**
  * Entrada de los datos de sensores. La usan por igual el emulador y, cuando existan,
@@ -34,11 +35,13 @@ public class ServicioDeLecturas {
     private final ServicioDeIncidentes incidentes;
     private final RelojDelSistema reloj;
     private final PatronesDeLlenado patrones;
+    private final ServicioDeIndicadores indicadores;
 
     ServicioDeLecturas(ContenedorRepositorio contenedores, RepositorioDeLecturas lecturas,
             ServicioDeEstadoDeSensores estadoDeSensores, ServicioDeIncidentes incidentes, RelojDelSistema reloj,
-            PatronesDeLlenado patrones) {
+            PatronesDeLlenado patrones, ServicioDeIndicadores indicadores) {
         this.patrones = patrones;
+        this.indicadores = indicadores;
         this.contenedores = contenedores;
         this.lecturas = lecturas;
         this.estadoDeSensores = estadoDeSensores;
@@ -90,6 +93,8 @@ public class ServicioDeLecturas {
         // Con lecturas nuevas se puede afinar el patrón de llenado (una vez por día alcanza)
         patrones.recalcularSiHaceFalta(ahora);
         estadoDeSensores.actualizarTodos(ahora);
+        // Si empezó un día nuevo, se resume el anterior para los indicadores
+        indicadores.cerrarDiasPendientes(ahora);
         return new Resultado(nuevas.size(), anomaliasNuevas);
     }
 }

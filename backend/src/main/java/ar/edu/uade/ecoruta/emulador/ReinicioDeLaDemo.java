@@ -13,6 +13,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import ar.edu.uade.ecoruta.comun.RelojDelSistema;
 import ar.edu.uade.ecoruta.contenedores.PatronesDeLlenado;
+import ar.edu.uade.ecoruta.indicadores.ServicioDeIndicadores;
 
 /**
  * Vuelve la demo al punto de partida sin recrear la base: borra lo que pasó (lecturas, rutas,
@@ -31,10 +32,12 @@ public class ReinicioDeLaDemo {
     private final EntityManager entidades;
     private final RelojDelSistema reloj;
     private final PatronesDeLlenado patrones;
+    private final ServicioDeIndicadores indicadores;
     private final TransactionTemplate transaccion;
 
     ReinicioDeLaDemo(EmuladorDeSensores emulador, JdbcTemplate jdbc, EntityManager entidades, RelojDelSistema reloj,
-            PatronesDeLlenado patrones, TransactionTemplate transaccion) {
+            PatronesDeLlenado patrones, ServicioDeIndicadores indicadores, TransactionTemplate transaccion) {
+        this.indicadores = indicadores;
         this.patrones = patrones;
         this.emulador = emulador;
         this.jdbc = jdbc;
@@ -47,7 +50,8 @@ public class ReinicioDeLaDemo {
     public Instant reiniciar() {
         Instant arranque = emulador.conElEmuladorDetenido(() -> transaccion.execute(estado -> {
             // RESTART IDENTITY: los incidentes y las rutas vuelven a numerarse desde 1
-            jdbc.execute("TRUNCATE notificacion, parada, ruta, incidente, lectura_sensor, patron_llenado RESTART IDENTITY");
+            jdbc.execute("TRUNCATE notificacion, parada, ruta, incidente, lectura_sensor, patron_llenado, resumen_diario"
+                    + " RESTART IDENTITY");
             jdbc.update("""
                     UPDATE contenedor SET llenado = llenado_inicial, ultima_lectura_at = NULL, anomalia = FALSE,
                            estado_sensor = 'funcionando', nivel_estimado = NULL, ultima_recoleccion_at = NULL,
@@ -63,6 +67,7 @@ public class ReinicioDeLaDemo {
             entidades.clear(); // que nadie siga usando los datos de antes
             reloj.recargar();
             patrones.olvidar();
+            indicadores.olvidar();
             emulador.olvidar();
             emulador.preparar();
             return reloj.ahora();

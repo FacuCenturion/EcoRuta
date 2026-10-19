@@ -107,6 +107,7 @@ public class EmuladorDeSensores {
     private final ServicioDeRutas servicioDeRutas;
     private final HistorialInicial historialInicial;
     private final MundoSimulado mundo;
+    private final HistorialDeIndicadores historialDeIndicadores;
     private final TransactionTemplate transaccion;
     private final boolean automatico;
 
@@ -132,7 +133,7 @@ public class EmuladorDeSensores {
             RutaRepositorio rutas, RepositorioDeLecturas lecturas, ServicioDeLecturas servicioDeLecturas,
             ServicioDeEstadoDeSensores estadoDeSensores, ServicioDeIncidentes incidentes, ServicioDePrioridad prioridad,
             ServicioDeDespacho despacho, ServicioDeRutas servicioDeRutas, HistorialInicial historialInicial,
-            MundoSimulado mundo, TransactionTemplate transaccion,
+            MundoSimulado mundo, HistorialDeIndicadores historialDeIndicadores, TransactionTemplate transaccion,
             @Value("${ecoruta.emulador.automatico:true}") boolean automatico) {
         this.reloj = reloj;
         this.contenedores = contenedores;
@@ -147,6 +148,7 @@ public class EmuladorDeSensores {
         this.servicioDeRutas = servicioDeRutas;
         this.historialInicial = historialInicial;
         this.mundo = mundo;
+        this.historialDeIndicadores = historialDeIndicadores;
         this.transaccion = transaccion;
         this.automatico = automatico;
     }
@@ -177,6 +179,7 @@ public class EmuladorDeSensores {
             revuelvenHasta.put(HistorialInicial.SENSOR_IRREGULAR, 6);
             log.info("Emulador: se cargaron 24 h de lecturas de ejemplo");
         }
+        historialDeIndicadores.generarSiFalta(ahora);
         for (Contenedor c : contenedores.findByActivoTrueOrderById()) {
             // Al reiniciar no sabemos el nivel real: se parte de lo que el sistema cree
             nivelReal.put(c.getId(), (double) (c.getNivelEstimado() != null ? c.getNivelEstimado() : c.getLlenado()));

@@ -42,6 +42,10 @@ public class ServicioDeRutas {
     @Transactional
     public void recolectar(Ruta ruta, Parada parada, Instant ahora) {
         llegar(ruta, parada);
+        Contenedor contenedor = parada.getContenedor();
+        // Lo que el sistema cree que tenía: el estimado si el sensor no es confiable
+        parada.registrarNivelAlLlegar(contenedor.getNivelEstimado() != null ? contenedor.getNivelEstimado()
+                : contenedor.getLlenado());
         parada.cerrar(Parada.RECOLECTADA, null, ahora);
         parada.getContenedor().registrarRecoleccion(ahora);
         ruta.getCamion().cargarContenedor();

@@ -46,6 +46,10 @@ public class Parada {
     @Column(name = "motivo_visita")
     private String motivoVisita; // llenado, riesgo, reporte, tiempo o de_paso
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.SMALLINT)
+    @Column(name = "nivel_al_llegar")
+    private Integer nivelAlLlegar; // nivel del contenedor cuando llegó el camión
+
     protected Parada() {
     }
 
@@ -56,6 +60,14 @@ public class Parada {
         this.orden = orden;
         this.estado = PENDIENTE;
         this.eta = Fechas.paraLaBase(eta);
+    }
+
+    void registrarNivelAlLlegar(int nivel) {
+        nivelAlLlegar = nivel;
+    }
+
+    public Integer getNivelAlLlegar() {
+        return nivelAlLlegar;
     }
 
     void cerrar(String nuevoEstado, String porQue, Instant momento) {

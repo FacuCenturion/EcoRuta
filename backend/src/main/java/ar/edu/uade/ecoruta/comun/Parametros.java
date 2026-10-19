@@ -28,6 +28,10 @@ public final class Parametros {
     public static final int NIVEL_PARADA_DE_PASO = 50;
     public static final double RADIO_PARADA_DE_PASO_KM = 0.3;
 
+    // Indicadores
+    public static final int[] RONDAS_RUTA_FIJA = { 8, 14, 20 }; // horas a las que sale la ruta fija de la comparación
+    public static final double KG_CO2_POR_KM = 1.3; // camión recolector, valor estimado
+
     // Patrón de llenado aprendido
     public static final int DIAS_DE_LECTURAS_PARA_EL_PATRON = 14;
     public static final double RITMO_MAXIMO_CREIBLE = 40; // % por hora; más que eso es un salto del sensor

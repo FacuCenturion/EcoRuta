@@ -157,6 +157,7 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | GET | `/reportes-vecinales` | Los incidentes que vienen de vecinos. Filtros: `zonaId`, `estado` |
 | POST | `/reportes-vecinales` | Carga un reporte. Body: `contenedorId`, `comentario` |
 | GET | `/panel/resumen` | Los números del día: recolectados, km evitados, prioritarios, sensores por estado. Filtro: `zonaId` |
+| GET | `/indicadores` | Solo el director. Km, desbordes y visitas de la ruta dinámica contra una ruta fija, eficiencia por sector, llenado por hora y mapa de calor. Filtros: `sectorId`, `dias` (30 por defecto) |
 | GET | `/simulacion` | Hora del sistema y si la simulación está en pausa |
 | POST | `/simulacion` | Pausar o acelerar la demo. Body: `enPausa`, `velocidad` (1 a 20) |
 | POST | `/simulacion/reiniciar` | Solo el director. Vuelve la demo al punto de partida |
@@ -171,6 +172,22 @@ TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
 
 curl http://localhost:8080/api/v1/panel/resumen -H "Authorization: Bearer $TOKEN"
 ```
+
+### Indicadores
+
+Cada día, cuando empieza el siguiente, el sistema guarda un resumen por sector en `resumen_diario`: km recorridos, contenedores vaciados, cuántos tenían menos de 50%, cuántos se vaciaron en el momento justo (50% o más y antes de desbordar), desbordes y llenado promedio por hora.
+
+Para comparar, calcula con **las mismas lecturas del día** qué habría pasado con una ruta fija que vacía todos los contenedores a las 8, 14 y 20 (`RONDAS_RUTA_FIJA` en `Parametros.java`). Toma cuánto subió cada contenedor entre lecturas y lo vuelve a acumular con esas rondas.
+
+La primera vez que arranca la demo se generan 8 semanas de resúmenes previos con la misma simulación, marcados como `simulado`, para que los gráficos no empiecen vacíos. La respuesta de `/indicadores` dice cuántos días del período son simulados.
+
+**El resultado depende de contra qué ruta fija se compare.** En 8 semanas simuladas:
+
+| | Fija: 3 rondas (8, 14, 20) | Fija: 1 ronda nocturna | Dinámica |
+| --- | --- | --- | --- |
+| Km recorridos | 8.128 | 2.709 | 5.288 |
+| Desbordes | 0 | 641 | 17 |
+| Vaciados con menos de 50% | 96% | 47% | 5% |
 
 ### Variables de entorno
 
@@ -213,10 +230,11 @@ src/main/java/ar/edu/uade/ecoruta/
   sensores/     entrada de lecturas, detección de anomalías y estado de cada sensor
   rutas/        despacho a demanda, orden de paradas y avance de la ruta
   panel/        números del día para el Panel general
+  indicadores/  resumen diario, comparación con la ruta fija y los indicadores
   emulador/     hace de sensores y choferes mientras no haya datos en vivo
   (próximos)    tráfico, aviso al chofer, indicadores
 src/main/resources/
-  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj, V5 patrón de llenado, V6 nivel inicial para reiniciar la demo, V7 contenedores reales de la zona 1, V8 fallas de sensor y desbordes, V9 segundo camión del sector 1)
+  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj, V5 patrón de llenado, V6 nivel inicial para reiniciar la demo, V7 contenedores reales de la zona 1, V8 fallas de sensor y desbordes, V9 segundo camión del sector 1, V10 indicadores)
 scripts/        importar_contenedores.py arma V7 con los contenedores reales; los otros generaron V2 y V3
 ```
 
