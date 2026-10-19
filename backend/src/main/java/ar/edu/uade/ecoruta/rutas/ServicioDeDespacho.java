@@ -99,7 +99,20 @@ public class ServicioDeDespacho {
                     "En " + sector.getNombre() + " no hay contenedores para recolectar ahora.");
         }
         Zona zona = zonas.findById(sector.getZonaId()).orElseThrow();
-        return crear(camion, zona, delSector, evaluaciones, Ruta.MANUAL, ahora);
+        Ruta ruta = crear(camion, zona, delSector, evaluaciones, Ruta.MANUAL, ahora);
+        if (ruta == null) {
+            throw new EstadoInvalidoException("SIN_CONTENEDORES_PRIORITARIOS",
+                    "Los contenedores prioritarios de " + sector.getNombre() + " ya están en la ruta de otro camión.");
+        }
+        return ruta;
+    }
+
+    private Set<String> contenedoresEnRutasActivas() {
+        return rutas.activas().stream()
+                .flatMap(r -> r.getParadas().stream())
+                .filter(Parada::estaPendiente)
+                .map(p -> p.getContenedor().getId())
+                .collect(Collectors.toSet());
     }
 
     private Set<String> camionesConRutaActiva() {
@@ -111,15 +124,24 @@ public class ServicioDeDespacho {
         Coordenada base = new Coordenada(zona.getBaseLat(), zona.getBaseLng());
         Map<String, Contenedor> porId = deLaZona.stream().collect(Collectors.toMap(Contenedor::getId, Function.identity()));
 
-        // Prioritarios más las paradas de paso que quedan cerca
-        List<Eleccion> elegidos = SeleccionDeParadas.elegir(deLaZona.stream()
-                .map(c -> new Opcion(c.getId(), c.posicion(), evaluaciones.get(c.getId()).lectura(),
-                        evaluaciones.get(c.getId()).motivo()))
-                .toList());
+        // Prioritarios (los más urgentes primero) más las paradas de paso que quedan cerca.
+        // No se toman los que ya están en la ruta de otro camión.
+        Set<String> enOtraRuta = contenedoresEnRutasActivas();
+        List<Eleccion> elegidos = SeleccionDeParadas.elegir(ahora.plus(Duration.ofMinutes(Parametros.MINUTOS_DE_URGENCIA)),
+                deLaZona.stream()
+                        .filter(c -> !enOtraRuta.contains(c.getId()))
+                        .map(c -> new Opcion(c.getId(), c.posicion(), evaluaciones.get(c.getId()).lectura(),
+                                evaluaciones.get(c.getId()).motivo(), evaluaciones.get(c.getId()).desbordeEstimado()))
+                        .toList());
+        if (elegidos.isEmpty()) {
+            return null;
+        }
         Map<String, String> motivoVisita = elegidos.stream().collect(Collectors.toMap(Eleccion::id, Eleccion::motivoVisita));
 
-        RutaPlanificada plan = PlanificadorDeRutas.planificar(base,
-                elegidos.stream().map(e -> new Punto(e.id(), porId.get(e.id()).posicion())).toList());
+        // Los urgentes se visitan primero, aunque estén lejos de la base
+        RutaPlanificada plan = PlanificadorDeRutas.planificarConUrgentes(base,
+                elegidos.stream().filter(Eleccion::urgente).map(e -> new Punto(e.id(), porId.get(e.id()).posicion())).toList(),
+                elegidos.stream().filter(e -> !e.urgente()).map(e -> new Punto(e.id(), porId.get(e.id()).posicion())).toList());
         // Lo que se habría recorrido visitando todos los contenedores, para medir el ahorro
         double kmRutaFija = PlanificadorDeRutas
                 .planificar(base, deLaZona.stream().map(c -> new Punto(c.getId(), c.posicion())).toList()).km();

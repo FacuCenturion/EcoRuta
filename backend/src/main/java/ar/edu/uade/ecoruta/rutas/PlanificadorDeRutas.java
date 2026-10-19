@@ -35,8 +35,31 @@ public final class PlanificadorDeRutas {
         return 2 * RADIO_TIERRA_KM * Math.asin(Math.sqrt(h));
     }
 
+    /**
+     * Primero recorre los urgentes y después el resto, cada tanda por vecino más cercano. Así un
+     * contenedor a punto de desbordar no queda para el final solo porque está lejos de la base.
+     */
+    public static RutaPlanificada planificarConUrgentes(Coordenada base, List<Punto> urgentes, List<Punto> resto) {
+        RutaPlanificada primera = recorrer(base, urgentes, false);
+        Coordenada desde = primera.orden().isEmpty() ? base
+                : urgentes.stream().filter(p -> p.id().equals(primera.orden().getLast())).findFirst().orElseThrow().posicion();
+        RutaPlanificada segunda = recorrer(desde, resto, false);
+
+        List<String> orden = new ArrayList<>(primera.orden());
+        orden.addAll(segunda.orden());
+        Coordenada ultima = orden.isEmpty() ? base
+                : java.util.stream.Stream.concat(urgentes.stream(), resto.stream())
+                        .filter(p -> p.id().equals(orden.getLast())).findFirst().orElseThrow().posicion();
+        double km = primera.km() + segunda.km() + (orden.isEmpty() ? 0 : distanciaKm(ultima, base));
+        return new RutaPlanificada(orden, km);
+    }
+
     /** Vecino más cercano: desde la base va siempre al contenedor pendiente que le queda más cerca. */
     public static RutaPlanificada planificar(Coordenada base, List<Punto> puntos) {
+        return recorrer(base, puntos, true);
+    }
+
+    private static RutaPlanificada recorrer(Coordenada base, List<Punto> puntos, boolean volverALaBase) {
         List<Punto> pendientes = new ArrayList<>(puntos);
         List<String> orden = new ArrayList<>();
         Coordenada actual = base;
@@ -58,7 +81,7 @@ public final class PlanificadorDeRutas {
             actual = mejor.posicion();
         }
 
-        if (!orden.isEmpty()) {
+        if (volverALaBase && !orden.isEmpty()) {
             km += distanciaKm(actual, base);
         }
         return new RutaPlanificada(orden, km);

@@ -40,6 +40,8 @@ public final class Parametros {
     // Un camión sale cuando hay al menos esta cantidad de contenedores para recolectar,
     // o cuando alguno ya está desbordado.
     public static final int MIN_PARADAS_PARA_SALIR = 3;
+    // Un contenedor que se pronostica que desborda antes de esto es urgente: se visita primero
+    public static final int MINUTOS_DE_URGENCIA = 90;
 
     // Anomalías de sensor
     public static final int SALTO_MINIMO_ANOMALIA = 4; // variación (en %) para considerarla un salto

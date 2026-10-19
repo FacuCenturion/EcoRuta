@@ -44,11 +44,11 @@ Al arrancar, Flyway crea las tablas y carga los datos de ejemplo. La API queda e
 
 ### Con qué datos trabaja
 
-El sistema trabaja con **una sola zona, la 1 (Comuna 1)**, con **180 contenedores reales** y **4 camiones**, uno por sector:
+El sistema trabaja con **una sola zona, la 1 (Comuna 1)**, con **180 contenedores reales** y **5 camiones**, uno por sector y un segundo en el sector 1:
 
-| Sector | Barrios | Contenedores | Camión |
+| Sector | Barrios | Contenedores | Camiones |
 | --- | --- | --- | --- |
-| 1 | Retiro y San Nicolás | 55 | C22 |
+| 1 | Retiro y San Nicolás | 55 | C22 y C40 |
 | 2 | Monserrat | 40 | C31 |
 | 3 | San Telmo y Puerto Madero | 45 | C14 |
 | 4 | Constitución | 40 | C17 |
@@ -59,6 +59,43 @@ Para regenerar la muestra: `pip install openpyxl pypdf` y `python backend/script
 
 Cada contenedor tiene su tipo: lateral (3.200 litros), bilateral (1.100 litros) o soterrado. Uno chico se llena antes. Las otras 6 zonas siguen en la base para dibujar el mapa, sin contenedores ni camiones.
 
+El sector 1 tiene dos camiones porque sus 40 contenedores chicos de oficinas se llenan todos a la vez al mediodía. Cuando hay más de un camión en un sector, no toman el mismo contenedor.
+
+### La simulación: qué pasa y qué tiene que deducir el sistema
+
+El emulador conoce la "verdad" del mundo y el sistema no: solo recibe contenedor, nivel y hora. Cada caso está cubierto por una prueba en `CasosDeSimulacionTests`.
+
+| Caso | Qué simula el emulador | Qué hace el sistema |
+| --- | --- | --- |
+| Oficinas (Retiro, San Nicolás) | Pico al mediodía, poco el fin de semana | Lo aprende en su patrón de llenado |
+| Gastronómico (San Telmo) | Pico de noche, más viernes y sábado; la feria de los domingos | Ídem |
+| Residencial (Constitución) | Pico de 18 a 21 | Ídem |
+| Mixto (Monserrat, Puerto Madero) | Cada contenedor con uno de los perfiles de arriba | Ídem |
+| Contenedor chico (bilateral 1.100 l) | Se llena antes | Lo prioriza antes por el pronóstico |
+| Poco uso (6% de los contenedores) | Casi no se llena | Lo recolecta por la regla de 48 horas |
+| Evento masivo | Un sector genera el doble durante 3 a 5 horas (~1 cada 2 días) | Pronostica riesgo y despacha antes |
+| Sensor sin señal | Deja de mandar; se arregla entre 6 y 30 horas después | Lo detecta a las 2 h, estima el nivel, abre un incidente y lo cierra cuando vuelve |
+| Sensor congelado | Repite el valor; se arregla después | Lo detecta a las 4 h, igual que arriba |
+| Sensor trabado | Al vaciarse sigue marcando lo de antes (3% de las recolecciones) | Lo detecta con la recolección confirmada y estima desde el vaciado |
+| Alguien revuelve | El sensor sube y baja de golpe 40 minutos | Alerta de llenado irregular |
+| Contenedor lleno de verdad | Marca 98 a 100 fijo | No lo confunde con un sensor congelado |
+| Ruido del sensor | Las lecturas fluctúan ±1 punto | Un contenedor quieto no parece congelado; el patrón no se infla |
+| Desborde | El camión no llega a tiempo | Lo registra, abre un incidente y se cierra al vaciarlo |
+| No se pudo recolectar | 6% de las paradas (auto estacionado, calle cortada…) | Incidente para el operador |
+| Reporte vecinal | ~9 por día; 3 de cada 10 sobre contenedores que no están llenos | Prioridad por reporte; el operador puede descartarlo |
+
+**Calibración:** la Ciudad genera unas 7.000 toneladas diarias de residuos con unos 27.500 contenedores de húmedos, unos 50 litros por hora por contenedor. El emulador usa entre 40 y 80 litros por hora en los laterales y entre 20 y 45 en los bilaterales, que están más cerca uno de otro. Con eso, en 3 días simulados hay unos 14 desbordes (alrededor de 4 por día).
+
+**Casos a pedido para la demo:** `POST /api/v1/simulacion/casos`, por ejemplo:
+
+```json
+{ "tipo": "falla_sensor", "contenedorId": "MON-10", "falla": "congelado", "horas": 6 }
+{ "tipo": "evento_masivo", "sectorId": 3, "horas": 4 }
+{ "tipo": "llenar", "contenedorId": "STE-02", "nivel": 100 }
+```
+
+Tipos: `falla_sensor` (con `falla` = `sin_senal`, `congelado` o `trabado`), `reparar_sensor`, `revolver`, `llenar`, `evento_masivo` y `reporte_vecinal`.
+
 ### Qué hace hoy
 
 Como todavía no hay sensores en vivo, el backend trae un **emulador**: cada 4 segundos reales pasan 5 minutos simulados, los contenedores se llenan, los sensores mandan su nivel y los camiones recorren sus rutas. Con esos datos el sistema hace lo mismo que haría con datos reales:
@@ -67,7 +104,7 @@ Como todavía no hay sensores en vivo, el backend trae un **emulador**: cada 4 s
 - con ese patrón pronostica a qué hora va a desbordar cada uno;
 - calcula qué contenedores son prioritarios (ver abajo);
 - detecta lecturas irregulares y sensores sin señal o congelados, y les estima el nivel;
-- despacha el camión de un sector cuando ese sector tiene 3 o más contenedores prioritarios o uno desbordado;
+- despacha un camión del sector cuando ese sector tiene 3 o más contenedores prioritarios o uno desbordado. Elige primero los que se pronostica que desbordan antes, y los que desbordan en la próxima hora y media los visita primero aunque estén lejos;
 - abre incidentes y los cierra solos cuando se resuelven.
 
 Un contenedor es prioritario por uno de estos motivos, en este orden:
@@ -123,6 +160,7 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | GET | `/simulacion` | Hora del sistema y si la simulación está en pausa |
 | POST | `/simulacion` | Pausar o acelerar la demo. Body: `enPausa`, `velocidad` (1 a 20) |
 | POST | `/simulacion/reiniciar` | Solo el director. Vuelve la demo al punto de partida |
+| POST | `/simulacion/casos` | Dispara un caso de la simulación para la demo (ver arriba) |
 
 Para probarlos desde Swagger: llamar a `/auth/login`, copiar el `token` de la respuesta y pegarlo con el botón **Authorize**. Desde la terminal:
 
@@ -178,7 +216,7 @@ src/main/java/ar/edu/uade/ecoruta/
   emulador/     hace de sensores y choferes mientras no haya datos en vivo
   (próximos)    tráfico, aviso al chofer, indicadores
 src/main/resources/
-  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj, V5 patrón de llenado, V6 nivel inicial para reiniciar la demo, V7 contenedores reales de la zona 1)
+  db/migration/ migraciones de Flyway (V1 esquema, V2 datos de ejemplo, V3 zonas oficiales, V4 sensores y reloj, V5 patrón de llenado, V6 nivel inicial para reiniciar la demo, V7 contenedores reales de la zona 1, V8 fallas de sensor y desbordes, V9 segundo camión del sector 1)
 scripts/        importar_contenedores.py arma V7 con los contenedores reales; los otros generaron V2 y V3
 ```
 

@@ -131,15 +131,19 @@ class CasosDeSimulacionTests {
 
     @Test
     void unEventoMasivoHaceQueElSectorSeLleneMasRapido() {
+        // La misma hora del mismo sector, primero sin evento y después con evento. Como la simulación
+        // usa una semilla fija, lo único que cambia entre las dos corridas es el evento.
         Instant desde = reloj.ahora();
-        emulador.eventoMasivo(2, 4);
-
         emulador.avanzarPasos(12);
+        double sinEvento = subidaPromedio(2, desde);
 
-        // Lo que subió cada sensor en esa hora (sin contar las bajadas por recolección)
+        reinicio.reiniciar();
+        emulador.eventoMasivo(2, 4);
+        emulador.avanzarPasos(12);
         double conEvento = subidaPromedio(2, desde);
-        double sinEvento = subidaPromedio(4, desde);
-        assertThat(conEvento).isGreaterThan(sinEvento * 1.8);
+
+        // El evento duplica la basura; con el ruido y alguna recolección, al menos un 60% más
+        assertThat(conEvento).isGreaterThan(sinEvento * 1.6);
     }
 
     @Test
@@ -197,17 +201,23 @@ class CasosDeSimulacionTests {
                 Boolean.class, id));
     }
 
+    // Cuánto subió en promedio cada contenedor del sector: última lectura menos la primera.
+    // No se cuentan los que vació un camión en el medio (tuvieron una bajada grande).
     private double subidaPromedio(int sector, Instant desde) {
         Double valor = jdbc.queryForObject("""
-                SELECT avg(subida) FROM (
-                    SELECT l.contenedor_id, sum(GREATEST(l.llenado - l.anterior, 0)) AS subida
+                SELECT avg(ultima - primera) FROM (
+                    SELECT l.contenedor_id,
+                           (array_agg(l.llenado ORDER BY l.medido_at))[1] AS primera,
+                           (array_agg(l.llenado ORDER BY l.medido_at DESC))[1] AS ultima,
+                           min(l.llenado - l.anterior) AS mayor_bajada
                     FROM (SELECT contenedor_id, llenado, medido_at,
                                  lag(llenado) OVER (PARTITION BY contenedor_id ORDER BY medido_at) AS anterior
                           FROM lectura_sensor WHERE medido_at >= ?) l
                     JOIN contenedor c ON c.id = l.contenedor_id
-                    WHERE c.sector_id = ? AND l.anterior IS NOT NULL AND l.llenado >= l.anterior
+                    WHERE c.sector_id = ? AND c.estado_sensor = 'funcionando'
                     GROUP BY l.contenedor_id
                 ) s
+                WHERE mayor_bajada > -5
                 """, Double.class, Fechas.paraLaBase(desde), sector);
         return valor == null ? 0 : valor;
     }

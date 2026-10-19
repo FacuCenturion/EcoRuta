@@ -37,6 +37,30 @@ class PlanificadorDeRutasTests {
     }
 
     @Test
+    void losUrgentesSeVisitanPrimeroAunqueEstenLejos() {
+        Punto cerca = new Punto("cerca", new Coordenada(-34.60, -58.39));
+        Punto lejosYUrgente = new Punto("urgente", new Coordenada(-34.60, -58.36));
+
+        RutaPlanificada ruta = PlanificadorDeRutas.planificarConUrgentes(BASE, List.of(lejosYUrgente), List.of(cerca));
+
+        assertThat(ruta.orden()).containsExactly("urgente", "cerca");
+        // base -> urgente -> cerca -> base
+        double esperado = PlanificadorDeRutas.distanciaKm(BASE, lejosYUrgente.posicion())
+                + PlanificadorDeRutas.distanciaKm(lejosYUrgente.posicion(), cerca.posicion())
+                + PlanificadorDeRutas.distanciaKm(cerca.posicion(), BASE);
+        assertThat(ruta.km()).isCloseTo(esperado, within(0.0001));
+    }
+
+    @Test
+    void sinUrgentesEsIgualQueElVecinoMasCercano() {
+        List<Punto> puntos = List.of(new Punto("a", new Coordenada(-34.60, -58.37)),
+                new Punto("b", new Coordenada(-34.60, -58.39)));
+
+        assertThat(PlanificadorDeRutas.planificarConUrgentes(BASE, List.of(), puntos))
+                .isEqualTo(PlanificadorDeRutas.planificar(BASE, puntos));
+    }
+
+    @Test
     void losKmIncluyenLaVueltaALaBase() {
         Coordenada destino = new Coordenada(-34.60, -58.39);
         RutaPlanificada ruta = PlanificadorDeRutas.planificar(BASE, List.of(new Punto("unico", destino)));

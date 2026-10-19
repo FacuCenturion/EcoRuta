@@ -75,7 +75,7 @@ public class EmuladorDeSensores {
     private static final double PROBABILIDAD_REPORTE_SIN_MOTIVO = 0.3; // vecino que reporta un contenedor vacío
     private static final double PROBABILIDAD_REVUELVEN = 0.0005; // por contenedor
     private static final double PROBABILIDAD_EVENTO_MASIVO = 0.0015; // en algún sector: ~1 cada 2 días
-    private static final double FACTOR_EVENTO_MASIVO = 3;
+    private static final double FACTOR_EVENTO_MASIVO = 2; // el doble de basura; con el pico de oficinas ya es mucho
     // Un sensor real nunca marca exactamente lo mismo durante horas: fluctúa un poco
     // (compactación, temperatura). Sin este ruido, un contenedor que casi no se usa parecería congelado.
     static final double RUIDO_DEL_SENSOR = 0.7; // desvío en puntos de llenado
@@ -486,7 +486,7 @@ public class EmuladorDeSensores {
     public String eventoMasivo(int sectorId, int horas) {
         return conElEmuladorDetenido(() -> {
             mundo.iniciarEvento(sectorId, reloj.ahora(), horas, FACTOR_EVENTO_MASIVO);
-            return "Evento masivo en el sector " + sectorId + ": genera el triple de basura durante " + horas + " h.";
+            return "Evento masivo en el sector " + sectorId + ": genera el doble de basura durante " + horas + " h.";
         });
     }
 

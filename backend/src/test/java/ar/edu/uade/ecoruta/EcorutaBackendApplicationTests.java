@@ -18,8 +18,8 @@ class EcorutaBackendApplicationTests {
         assertThat(contar("zona")).isEqualTo(7);
         assertThat(contar("sector")).isEqualTo(4);
         assertThat(contar("contenedor")).isEqualTo(180);
-        assertThat(contar("camion")).isEqualTo(4);
-        assertThat(contar("usuario")).isEqualTo(6); // director, operador y un chofer por camión
+        assertThat(contar("camion")).isEqualTo(5); // uno por sector y un segundo en el sector 1
+        assertThat(contar("usuario")).isEqualTo(7); // director, operador y un chofer por camión
     }
 
     @Test
@@ -31,7 +31,7 @@ class EcorutaBackendApplicationTests {
     }
 
     @Test
-    void elSistemaTrabajaSoloConLaZona1ConUnCamionPorSector() {
+    void elSistemaTrabajaSoloConLaZona1YCadaSectorTieneSuCamion() {
         assertThat(contar("contenedor WHERE zona_id <> 1")).isZero();
         assertThat(jdbc.queryForObject("SELECT count(DISTINCT sector_id) FROM camion", Integer.class)).isEqualTo(4);
         // Todos los contenedores reales quedaron dentro de la Comuna 1

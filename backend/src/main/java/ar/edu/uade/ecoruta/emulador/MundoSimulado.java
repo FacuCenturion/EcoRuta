@@ -26,6 +26,15 @@ class MundoSimulado {
     private static final long SEMILLA = 2026;
     private static final double PROPORCION_POCO_USO = 0.06; // casi no se llenan: los cubre la regla de 48 h
 
+    // Cuánta basura recibe un contenedor, en litros por hora (promedio de la semana).
+    // Referencia: la Ciudad genera unas 7.000 toneladas diarias y tiene unos 27.500 contenedores
+    // de húmedos; da unos 250 kg (1,3 m³) por contenedor por día, unos 50 litros por hora.
+    // Los bilaterales de 1.100 litros reciben menos porque se ponen más cerca uno de otro.
+    private static final double LITROS_MINIMOS = 40;
+    private static final double LITROS_MAXIMOS = 80;
+    private static final double LITROS_MINIMOS_BILATERAL = 20;
+    private static final double LITROS_MAXIMOS_BILATERAL = 45;
+
     /** Lo que se sabe de un contenedor en el mundo simulado. */
     record Verdad(PerfilDeBarrio perfil, double litrosPorHora, boolean pocoUso) {
     }
@@ -52,7 +61,10 @@ class MundoSimulado {
             default -> PerfilDeBarrio.RESIDENCIAL;
         };
         boolean pocoUso = azar.nextDouble() < PROPORCION_POCO_USO;
-        double litros = pocoUso ? 8 + azar.nextDouble() * 7 : 50 + azar.nextDouble() * 60;
+        boolean bilateral = contenedor.getTipo().equals("bilateral");
+        double minimo = bilateral ? LITROS_MINIMOS_BILATERAL : LITROS_MINIMOS;
+        double maximo = bilateral ? LITROS_MAXIMOS_BILATERAL : LITROS_MAXIMOS;
+        double litros = pocoUso ? 8 + azar.nextDouble() * 7 : minimo + azar.nextDouble() * (maximo - minimo);
         return new Verdad(perfil, litros, pocoUso);
     }
 
