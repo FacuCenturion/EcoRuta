@@ -21,6 +21,7 @@ import tools.jackson.databind.json.JsonMapper;
 import ar.edu.uade.ecoruta.comun.Coordenada;
 import ar.edu.uade.ecoruta.comun.error.RecursoNoEncontradoException;
 import ar.edu.uade.ecoruta.eventos.CanalDeEventos;
+import ar.edu.uade.ecoruta.rutas.ClienteOsrm.Indicacion;
 import ar.edu.uade.ecoruta.rutas.ClienteOsrm.Trazado;
 import ar.edu.uade.ecoruta.zonas.Zona;
 import ar.edu.uade.ecoruta.zonas.ZonaRepositorio;
@@ -42,8 +43,16 @@ public class ServicioDeTrazado {
     private static final long MS_ENTRE_PEDIDOS = 1000;
     private static final long MS_ANTES_DE_REINTENTAR = 60_000;
 
-    /** @param tramos uno por tramo de la ruta (base, paradas en orden, base); vacío si todavía no está */
-    public record TrazadoDto(long rutaId, String estado, Double kmPorCalle, List<List<Coordenada>> tramos) {
+    /**
+     * @param tramos       uno por tramo de la ruta (base, paradas en orden, base); vacío si todavía no está
+     * @param indicaciones las maniobras de cada tramo, para la navegación de la app del chofer
+     */
+    public record TrazadoDto(long rutaId, String estado, Double kmPorCalle, List<List<Coordenada>> tramos,
+            List<List<Indicacion>> indicaciones) {
+
+        static TrazadoDto sin(long rutaId, String estado) {
+            return new TrazadoDto(rutaId, estado, null, List.of(), List.of());
+        }
     }
 
     private final RutaRepositorio rutas;
@@ -72,23 +81,26 @@ public class ServicioDeTrazado {
     public TrazadoDto consultar(long rutaId) {
         Ruta ruta = rutas.conParadas(rutaId).orElseThrow(
                 () -> new RecursoNoEncontradoException("RUTA_NO_EXISTE", "No existe la ruta " + rutaId + "."));
-        Map<String, Object> guardado = jdbc.queryForMap("SELECT trazado, km_por_calle FROM ruta WHERE id = ?", rutaId);
-        if (guardado.get("trazado") != null) {
+        Map<String, Object> guardado = jdbc.queryForMap(
+                "SELECT trazado, km_por_calle, indicaciones FROM ruta WHERE id = ?", rutaId);
+        // Los recorridos guardados antes de que hubiera indicaciones se vuelven a pedir
+        if (guardado.get("trazado") != null && guardado.get("indicaciones") != null) {
             return new TrazadoDto(rutaId, LISTO, ((BigDecimal) guardado.get("km_por_calle")).doubleValue(),
-                    leer((String) guardado.get("trazado")));
+                    leer((String) guardado.get("trazado")), leerIndicaciones((String) guardado.get("indicaciones")));
         }
         if (!osrm.activo()) {
-            return new TrazadoDto(rutaId, SIN_SERVICIO, null, List.of());
+            return TrazadoDto.sin(rutaId, SIN_SERVICIO);
         }
         Long fallo = fallaronEn.get(rutaId);
         if (fallo != null && System.currentTimeMillis() - fallo < MS_ANTES_DE_REINTENTAR) {
-            return new TrazadoDto(rutaId, FALLO, null, List.of());
+            return TrazadoDto.sin(rutaId, FALLO);
         }
         if (enCurso.add(rutaId)) {
             List<Coordenada> puntos = puntosDe(ruta);
-            cola.submit(() -> calcular(rutaId, puntos));
+            int paradas = ruta.getParadas().size();
+            cola.submit(() -> calcular(rutaId, puntos, paradas));
         }
-        return new TrazadoDto(rutaId, CALCULANDO, null, List.of());
+        return TrazadoDto.sin(rutaId, CALCULANDO);
     }
 
     // La base de la zona, las paradas en orden y la vuelta a la base
@@ -102,11 +114,17 @@ public class ServicioDeTrazado {
         return puntos;
     }
 
-    void calcular(long rutaId, List<Coordenada> puntos) {
+    /** La ruta cambió (por ejemplo, se sumó una parada): el recorrido se vuelve a pedir la próxima vez. */
+    public void invalidar(long rutaId) {
+        jdbc.update("UPDATE ruta SET trazado = NULL, indicaciones = NULL, km_por_calle = NULL WHERE id = ?", rutaId);
+        fallaronEn.remove(rutaId);
+    }
+
+    void calcular(long rutaId, List<Coordenada> puntos, int paradas) {
         try {
             var trazado = osrm.trazar(puntos);
             if (trazado.isPresent()) {
-                guardar(rutaId, trazado.get());
+                guardar(rutaId, trazado.get(), paradas);
                 fallaronEn.remove(rutaId);
                 eventos.avisar();
             } else {
@@ -120,13 +138,21 @@ public class ServicioDeTrazado {
         }
     }
 
-    private void guardar(long rutaId, Trazado trazado) {
+    // Solo se guarda si la ruta sigue teniendo las mismas paradas que cuando se pidió
+    private void guardar(long rutaId, Trazado trazado, int paradas) {
         double[][][] tramos = trazado.tramos().stream()
                 .map(tramo -> tramo.stream().map(p -> new double[] { redondear(p.lat()), redondear(p.lng()) })
                         .toArray(double[][]::new))
                 .toArray(double[][][]::new);
-        jdbc.update("UPDATE ruta SET trazado = ?, km_por_calle = ? WHERE id = ?", json.writeValueAsString(tramos),
-                BigDecimal.valueOf(trazado.km()), rutaId);
+        jdbc.update("""
+                UPDATE ruta SET trazado = ?, indicaciones = ?, km_por_calle = ?
+                WHERE id = ? AND (SELECT count(*) FROM parada WHERE ruta_id = ?) = ?
+                """, json.writeValueAsString(tramos), json.writeValueAsString(trazado.indicaciones()),
+                BigDecimal.valueOf(trazado.km()), rutaId, rutaId, paradas);
+    }
+
+    private List<List<Indicacion>> leerIndicaciones(String texto) {
+        return Arrays.stream(json.readValue(texto, Indicacion[][].class)).map(List::of).toList();
     }
 
     private List<List<Coordenada>> leer(String texto) {

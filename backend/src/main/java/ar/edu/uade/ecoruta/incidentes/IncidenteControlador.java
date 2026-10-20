@@ -1,6 +1,9 @@
 package ar.edu.uade.ecoruta.incidentes;
 
+import java.util.Base64;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -8,6 +11,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -54,13 +59,28 @@ public class IncidenteControlador {
     public List<IncidenteDto> listar(@RequestParam(required = false) Integer zonaId,
             @RequestParam(required = false) Integer sectorId, @RequestParam(required = false) String tipo,
             @RequestParam(required = false) String estado) {
-        return incidentes.buscar(zonaId, sectorId, tipo, estado).stream().map(IncidenteDto::de).toList();
+        Set<Long> conFoto = new HashSet<>(incidentes.conFoto());
+        return incidentes.buscar(zonaId, sectorId, tipo, estado).stream()
+                .map(i -> IncidenteDto.de(i, conFoto.contains(i.getId())))
+                .toList();
     }
 
     @GetMapping("/incidentes/{id}")
     public IncidenteDto buscar(@PathVariable long id) {
-        return incidentes.conDetalle(id).map(IncidenteDto::de).orElseThrow(
+        boolean tieneFoto = incidentes.foto(id).isPresent();
+        return incidentes.conDetalle(id).map(i -> IncidenteDto.de(i, tieneFoto)).orElseThrow(
                 () -> new RecursoNoEncontradoException("INCIDENTE_NO_EXISTE", "No existe el incidente " + id + "."));
+    }
+
+    /** La foto que sacó el chofer cuando no pudo recolectar. */
+    @GetMapping("/incidentes/{id}/foto")
+    public ResponseEntity<byte[]> foto(@PathVariable long id) {
+        String dataUrl = incidentes.foto(id).orElseThrow(
+                () -> new RecursoNoEncontradoException("SIN_FOTO", "El incidente " + id + " no tiene foto."));
+        int coma = dataUrl.indexOf(',');
+        String tipo = dataUrl.substring("data:".length(), dataUrl.indexOf(';'));
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType(tipo))
+                .body(Base64.getDecoder().decode(dataUrl.substring(coma + 1)));
     }
 
     /** El operador confirma o descarta. Queda guardado quién lo decidió y cuándo. */

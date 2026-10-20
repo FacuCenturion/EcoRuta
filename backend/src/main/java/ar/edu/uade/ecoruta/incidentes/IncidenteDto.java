@@ -9,9 +9,13 @@ import ar.edu.uade.ecoruta.contenedores.Contenedor;
 /** Incidente con los mismos nombres de campo que el tipo Incidente del front. */
 public record IncidenteDto(long id, String tipo, String estado, String contenedorId, Integer zonaId, Integer sectorId,
         String direccion, String descripcion, String sugerencia, OffsetDateTime creado, Integer camionNumero,
-        String origen, OffsetDateTime decidido) {
+        String origen, OffsetDateTime decidido, boolean tieneFoto) {
 
     static IncidenteDto de(Incidente i) {
+        return de(i, false);
+    }
+
+    static IncidenteDto de(Incidente i, boolean tieneFoto) {
         Contenedor contenedor = i.getContenedor();
         Camion camion = i.getCamion();
         Integer zonaId = contenedor != null ? Integer.valueOf(contenedor.getZonaId())
@@ -22,6 +26,6 @@ public record IncidenteDto(long id, String tipo, String estado, String contenedo
                 contenedor == null ? null : contenedor.getId(), zonaId, sectorId,
                 contenedor == null ? null : contenedor.getDireccion(),
                 i.getDescripcion(), i.getSugerencia(), Fechas.enBuenosAires(i.getCreadoAt()),
-                camion == null ? null : camion.getNumero(), i.getOrigen(), Fechas.enBuenosAires(i.getDecididoAt()));
+                camion == null ? null : camion.getNumero(), i.getOrigen(), Fechas.enBuenosAires(i.getDecididoAt()), tieneFoto);
     }
 }

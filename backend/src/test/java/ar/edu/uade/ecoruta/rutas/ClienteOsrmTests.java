@@ -20,8 +20,10 @@ class ClienteOsrmTests {
     // Recortada de una respuesta real: base -> contenedor -> base, cada tramo con sus pasos
     private static final String RESPUESTA = """
             {"code":"Ok","routes":[{"distance":3910.7,"legs":[
-              {"steps":[{"geometry":{"coordinates":[[-58.37,-34.609],[-58.3705,-34.609],[-58.371,-34.609]]}},
-                        {"geometry":{"coordinates":[[-58.371,-34.609],[-58.371,-34.6085],[-58.3755,-34.6037]]}}]},
+              {"steps":[{"geometry":{"coordinates":[[-58.37,-34.609],[-58.3705,-34.609],[-58.371,-34.609]]},
+                         "maneuver":{"type":"depart","location":[-58.37,-34.609]},"name":"Av. Alicia M. de Justo","distance":92.4},
+                        {"geometry":{"coordinates":[[-58.371,-34.609],[-58.371,-34.6085],[-58.3755,-34.6037]]},
+                         "maneuver":{"type":"turn","modifier":"right","location":[-58.371,-34.609]},"name":"Lima","distance":680.2}]},
               {"steps":[{"geometry":{"coordinates":[[-58.3755,-34.6037],[-58.37,-34.609]]}}]}
             ]}],"waypoints":[]}
             """;
@@ -38,6 +40,20 @@ class ClienteOsrmTests {
         assertThat(trazado.tramos().get(0)).containsExactly(new Coordenada(-34.609, -58.37),
                 new Coordenada(-34.609, -58.371), new Coordenada(-34.6085, -58.371), new Coordenada(-34.6037, -58.3755));
         assertThat(trazado.tramos().get(1).get(0)).isEqualTo(new Coordenada(-34.6037, -58.3755));
+    }
+
+    @Test
+    void guardaLasManiobrasDeCadaTramoParaNavegar() {
+        var trazado = trazarCon(withSuccess(RESPUESTA, MediaType.APPLICATION_JSON)).orElseThrow();
+        assertThat(trazado.indicaciones()).hasSize(2);
+        var giro = trazado.indicaciones().get(0).get(1);
+        assertThat(giro.tipo()).isEqualTo("turn");
+        assertThat(giro.modificador()).isEqualTo("right");
+        assertThat(giro.calle()).isEqualTo("Lima");
+        assertThat(giro.lat()).isEqualTo(-34.609);
+        assertThat(giro.metros()).isEqualTo(680);
+        // El segundo tramo de la respuesta grabada no trae maniobras
+        assertThat(trazado.indicaciones().get(1)).isEmpty();
     }
 
     @Test

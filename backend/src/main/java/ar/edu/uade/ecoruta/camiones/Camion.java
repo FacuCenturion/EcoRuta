@@ -72,6 +72,12 @@ public class Camion {
         kmRecorridosHoy = kmRecorridosHoy.add(BigDecimal.valueOf(km)).setScale(2, RoundingMode.HALF_UP);
     }
 
+    /** La posición que manda el celular del chofer mientras maneja. Los km se cuentan al llegar a cada parada. */
+    public void ubicar(Coordenada posicion) {
+        lat = posicion.lat();
+        lng = posicion.lng();
+    }
+
     public void cargarContenedor() {
         cargaPct = Math.min(100, cargaPct + Parametros.CARGA_POR_PARADA);
     }

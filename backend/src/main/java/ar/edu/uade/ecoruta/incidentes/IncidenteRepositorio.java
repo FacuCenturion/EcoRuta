@@ -10,6 +10,17 @@ import org.springframework.data.repository.query.Param;
 
 public interface IncidenteRepositorio extends JpaRepository<Incidente, Long> {
 
+    /** Los que tienen foto. La foto no está en la entidad para no traerla con cada lista. */
+    @Query(value = "SELECT id FROM incidente WHERE foto IS NOT NULL", nativeQuery = true)
+    List<Long> conFoto();
+
+    @Query(value = "SELECT foto FROM incidente WHERE id = :id", nativeQuery = true)
+    java.util.Optional<String> foto(@Param("id") long id);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query(value = "UPDATE incidente SET foto = :foto WHERE id = :id", nativeQuery = true)
+    void guardarFoto(@Param("id") long id, @Param("foto") String foto);
+
     // Los filtros son opcionales: si llegan vacíos no se aplican.
     @Query("""
             SELECT i FROM Incidente i

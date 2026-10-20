@@ -38,6 +38,7 @@ import ar.edu.uade.ecoruta.rutas.PlanificadorDeRutas;
 import ar.edu.uade.ecoruta.rutas.Ruta;
 import ar.edu.uade.ecoruta.rutas.RutaRepositorio;
 import ar.edu.uade.ecoruta.rutas.ServicioDeDespacho;
+import ar.edu.uade.ecoruta.rutas.ServicioDeParadasNuevas;
 import ar.edu.uade.ecoruta.rutas.ServicioDeRutas;
 import ar.edu.uade.ecoruta.sensores.LecturaNueva;
 import ar.edu.uade.ecoruta.sensores.RepositorioDeLecturas;
@@ -110,6 +111,7 @@ public class EmuladorDeSensores {
     private final HistorialDeIndicadores historialDeIndicadores;
     private final TransactionTemplate transaccion;
     private final CanalDeEventos eventos;
+    private final ServicioDeParadasNuevas paradasNuevas;
     private final boolean automatico;
 
     // Lo que solo conoce el emulador
@@ -135,7 +137,7 @@ public class EmuladorDeSensores {
             ServicioDeEstadoDeSensores estadoDeSensores, ServicioDeIncidentes incidentes, ServicioDePrioridad prioridad,
             ServicioDeDespacho despacho, ServicioDeRutas servicioDeRutas, HistorialInicial historialInicial,
             MundoSimulado mundo, HistorialDeIndicadores historialDeIndicadores, TransactionTemplate transaccion,
-            CanalDeEventos eventos,
+            CanalDeEventos eventos, ServicioDeParadasNuevas paradasNuevas,
             @Value("${ecoruta.emulador.automatico:true}") boolean automatico) {
         this.reloj = reloj;
         this.contenedores = contenedores;
@@ -153,6 +155,7 @@ public class EmuladorDeSensores {
         this.historialDeIndicadores = historialDeIndicadores;
         this.transaccion = transaccion;
         this.eventos = eventos;
+        this.paradasNuevas = paradasNuevas;
         this.automatico = automatico;
     }
 
@@ -303,6 +306,7 @@ public class EmuladorDeSensores {
 
         // 4) El sistema decide si manda camiones, y los choferes avanzan en sus rutas
         despacho.despacharAutomatico(ahora);
+        paradasNuevas.proponer(ahora); // a los choferes con la app, si algo se volvió urgente
         List<LecturaNueva> trasRecoleccion = new ArrayList<>();
         Map<String, Ruta> rutaPorCamion = new HashMap<>();
         rutas.activas().forEach(r -> rutaPorCamion.put(r.getCamion().getId(), r));

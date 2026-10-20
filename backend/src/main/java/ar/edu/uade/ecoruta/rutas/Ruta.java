@@ -87,6 +87,18 @@ public class Ruta {
         paradas.add(new Parada(this, contenedor, paradas.size() + 1, eta, motivoVisita));
     }
 
+    /** Suma una parada en el lugar orden (desde 1) y corre las que siguen. */
+    void insertarParada(Contenedor contenedor, int orden, Instant ahora, String motivoVisita, double kmExtra,
+            int minutosExtra) {
+        Instant eta = paradas.stream().filter(p -> p.getOrden() == orden - 1 && p.getEta() != null).findFirst()
+                .map(p -> p.getEta().toInstant()).filter(anterior -> anterior.isAfter(ahora)).orElse(ahora)
+                .plusSeconds(minutosExtra * 60L);
+        paradas.stream().filter(p -> p.getOrden() >= orden).forEach(p -> p.correrPorParadaNueva(minutosExtra));
+        paradas.add(orden - 1, new Parada(this, contenedor, orden, eta, motivoVisita));
+        kmPlanificados = kmPlanificados.add(BigDecimal.valueOf(kmExtra)).setScale(2, RoundingMode.HALF_UP);
+        duracionEstimadaMin += minutosExtra;
+    }
+
     void iniciar(Instant momento) {
         estado = EN_CURSO;
         salidaReal = Fechas.paraLaBase(momento);

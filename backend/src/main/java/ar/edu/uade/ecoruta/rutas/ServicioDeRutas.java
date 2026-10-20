@@ -9,6 +9,7 @@ import ar.edu.uade.ecoruta.camiones.Camion;
 import ar.edu.uade.ecoruta.comun.Coordenada;
 import ar.edu.uade.ecoruta.comun.error.EstadoInvalidoException;
 import ar.edu.uade.ecoruta.contenedores.Contenedor;
+import ar.edu.uade.ecoruta.incidentes.Incidente;
 import ar.edu.uade.ecoruta.incidentes.ServicioDeIncidentes;
 import ar.edu.uade.ecoruta.zonas.Zona;
 import ar.edu.uade.ecoruta.zonas.ZonaRepositorio;
@@ -58,12 +59,18 @@ public class ServicioDeRutas {
 
     /** El camión llegó pero no pudo vaciarlo: queda un incidente para el operador. */
     @Transactional
-    public void noSePudo(Ruta ruta, Parada parada, String motivo, Instant ahora) {
+    public Incidente noSePudo(Ruta ruta, Parada parada, String motivo, Instant ahora) {
+        return noSePudo(ruta, parada, motivo, null, ahora);
+    }
+
+    @Transactional
+    public Incidente noSePudo(Ruta ruta, Parada parada, String motivo, String nota, Instant ahora) {
         llegar(ruta, parada);
-        parada.cerrar(Parada.NO_SE_PUDO, motivo, ahora);
+        parada.cerrar(Parada.NO_SE_PUDO, motivo.length() > 200 ? motivo.substring(0, 200) : motivo, ahora);
         ruta.getCamion().demorar();
-        incidentes.crearNoSePudo(parada.getContenedor(), ruta.getCamion(), motivo, ahora);
+        Incidente incidente = incidentes.crearNoSePudo(parada.getContenedor(), ruta.getCamion(), motivo, nota, ahora);
         terminarSiCorresponde(ruta);
+        return incidente;
     }
 
     private void llegar(Ruta ruta, Parada parada) {

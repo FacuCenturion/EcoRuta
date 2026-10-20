@@ -62,6 +62,14 @@ public class Parada {
         this.eta = Fechas.paraLaBase(eta);
     }
 
+    // Se sumó una parada antes que esta: pasa un lugar más atrás y llega unos minutos más tarde
+    void correrPorParadaNueva(int minutos) {
+        orden += 1;
+        if (eta != null) {
+            eta = eta.plusMinutes(minutos);
+        }
+    }
+
     void registrarNivelAlLlegar(int nivel) {
         nivelAlLlegar = nivel;
     }

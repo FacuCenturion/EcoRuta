@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import ar.edu.uade.ecoruta.comun.Coordenada;
+import ar.edu.uade.ecoruta.contenedores.Contenedor;
 import ar.edu.uade.ecoruta.comun.Fechas;
 
 public record RutaDto(long id, String camionId, int camionNumero, int zonaId, int sectorId, String estado, String origen,
@@ -13,17 +14,22 @@ public record RutaDto(long id, String camionId, int camionNumero, int zonaId, in
     /**
      * Parada con los mismos nombres de campo que el tipo Parada del front.
      *
-     * @param motivoVisita por qué pasa el camión: llenado, riesgo, reporte, tiempo o de_paso
-     * @param motivo       por qué no se pudo recolectar (solo en las que quedaron no_se_pudo)
+     * @param motivoVisita      por qué pasa el camión: llenado, riesgo, reporte, tiempo o de_paso
+     * @param motivo            por qué no se pudo recolectar (solo en las que quedaron no_se_pudo)
+     * @param llenado           lo que el sistema cree que tiene ahora (el estimado si el sensor falla)
+     * @param tipo              lateral, bilateral o soterrado
+     * @param ultimaRecoleccion la última vez que un chofer lo vació; vacía si no hay dato
      */
     public record ParadaDto(long id, String contenedorId, String direccion, Coordenada posicion, int orden, String estado,
-            String motivoVisita, OffsetDateTime eta, OffsetDateTime horaReal, String motivo) {
+            String motivoVisita, OffsetDateTime eta, OffsetDateTime horaReal, String motivo, int llenado, String tipo,
+            String barrio, OffsetDateTime ultimaRecoleccion) {
 
         public static ParadaDto de(Parada p) {
-            return new ParadaDto(p.getId(), p.getContenedor().getId(), p.getContenedor().getDireccion(),
-                    p.getContenedor().posicion(), p.getOrden(),
+            Contenedor c = p.getContenedor();
+            return new ParadaDto(p.getId(), c.getId(), c.getDireccion(), c.posicion(), p.getOrden(),
                     p.getEstado(), p.getMotivoVisita(), Fechas.enBuenosAires(p.getEta()), Fechas.enBuenosAires(p.getHoraReal()),
-                    p.getMotivo());
+                    p.getMotivo(), c.getNivelEstimado() != null ? c.getNivelEstimado() : c.getLlenado(), c.getTipo(),
+                    c.getBarrio(), c.getUltimaRecoleccionAt());
         }
     }
 

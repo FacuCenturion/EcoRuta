@@ -54,7 +54,7 @@ public class ReinicioDeLaDemo {
     public Instant reiniciar() {
         Instant arranque = emulador.conElEmuladorDetenido(() -> transaccion.execute(estado -> {
             // RESTART IDENTITY: los incidentes y las rutas vuelven a numerarse desde 1
-            jdbc.execute("TRUNCATE notificacion, parada, ruta, incidente, lectura_sensor, patron_llenado, resumen_diario"
+            jdbc.execute("TRUNCATE notificacion, parada_propuesta, parada, ruta, incidente, lectura_sensor, patron_llenado, resumen_diario"
                     + " RESTART IDENTITY");
             jdbc.update("""
                     UPDATE contenedor SET llenado = llenado_inicial, ultima_lectura_at = NULL, anomalia = FALSE,

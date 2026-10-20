@@ -43,8 +43,8 @@ class EventosTests {
     @Test
     void unCambioHechoDesdeElPanelLlegaComoAviso() throws Exception {
         String token = token("operador", "operador123");
+        canal.enviarSiHayCambios(); // lo que haya quedado de otras pruebas, antes de conectarse
         MockHttpServletResponse respuesta = conectar(token);
-        canal.enviarSiHayCambios(); // lo que haya quedado de otras pruebas
 
         mvc.perform(get("/api/v1/contenedores").header("Authorization", "Bearer " + token)).andExpect(status().isOk());
         canal.enviarSiHayCambios();
@@ -59,8 +59,9 @@ class EventosTests {
 
     @Test
     void variosCambiosSeguidosSeJuntanEnUnSoloAviso() throws Exception {
-        MockHttpServletResponse respuesta = conectar(token("director", "director123"));
-        canal.enviarSiHayCambios();
+        String token = token("director", "director123");
+        canal.enviarSiHayCambios(); // lo que haya quedado de otras pruebas, antes de conectarse
+        MockHttpServletResponse respuesta = conectar(token);
         canal.avisar();
         canal.avisar();
         canal.avisar();

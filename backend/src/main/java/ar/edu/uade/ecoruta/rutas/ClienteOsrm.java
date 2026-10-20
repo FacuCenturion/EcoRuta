@@ -33,8 +33,28 @@ public class ClienteOsrm {
     // Los puntos que están a menos de esto de la línea entre sus vecinos no cambian el dibujo
     static final double TOLERANCIA_METROS = 3;
 
-    /** @param tramos un tramo por cada par de puntos seguidos que se pidieron */
-    public record Trazado(List<List<Coordenada>> tramos, double km) {
+    /**
+     * @param tramos       un tramo por cada par de puntos seguidos que se pidieron
+     * @param indicaciones las maniobras de cada tramo, en el mismo orden
+     */
+    public record Trazado(List<List<Coordenada>> tramos, double km, List<List<Indicacion>> indicaciones) {
+
+        public Trazado(List<List<Coordenada>> tramos, double km) {
+            this(tramos, km, tramos.stream().map(t -> List.<Indicacion>of()).toList());
+        }
+    }
+
+    /**
+     * Una maniobra, como la devuelve OSRM: dónde hay que doblar y por qué calle se sigue.
+     *
+     * @param tipo        depart, turn, new name, continue, roundabout, arrive... (ver la documentación de OSRM)
+     * @param modificador left, right, slight left, sharp right, straight, uturn; vacío si no aplica
+     * @param calle       la calle por la que se sigue después de la maniobra
+     * @param salida      en una rotonda, por qué salida
+     * @param metros      cuánto se recorre por esa calle hasta la maniobra siguiente
+     */
+    public record Indicacion(String tipo, String modificador, String calle, Integer salida, double lat, double lng,
+            double metros) {
     }
 
     // Lo que responde OSRM, solo con lo que se usa
@@ -51,7 +71,11 @@ public class ClienteOsrm {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
-    record PasoOsrm(Geometria geometry) {
+    record PasoOsrm(Geometria geometry, Maniobra maneuver, String name, Double distance) {
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    record Maniobra(String type, String modifier, List<Double> location, Integer exit) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -109,9 +133,17 @@ public class ClienteOsrm {
         }
         RutaOsrm ruta = respuesta.routes().get(0);
         List<List<Coordenada>> tramos = new ArrayList<>();
+        List<List<Indicacion>> indicaciones = new ArrayList<>();
         for (TramoOsrm tramo : ruta.legs()) {
             List<Coordenada> puntos = new ArrayList<>();
+            List<Indicacion> maniobras = new ArrayList<>();
             for (PasoOsrm paso : tramo.steps()) {
+                if (paso.maneuver() != null && paso.maneuver().location() != null) {
+                    Maniobra m = paso.maneuver();
+                    maniobras.add(new Indicacion(m.type(), m.modifier(), paso.name() == null ? "" : paso.name(), m.exit(),
+                            m.location().get(1), m.location().get(0),
+                            paso.distance() == null ? 0 : Math.round(paso.distance())));
+                }
                 for (List<Double> c : paso.geometry().coordinates()) {
                     Coordenada punto = new Coordenada(c.get(1), c.get(0));
                     // Cada paso empieza donde terminó el anterior: no se repite el punto
@@ -121,8 +153,9 @@ public class ClienteOsrm {
                 }
             }
             tramos.add(simplificar(puntos, TOLERANCIA_METROS));
+            indicaciones.add(maniobras);
         }
-        return Optional.of(new Trazado(tramos, Math.round(ruta.distance() / 10) / 100.0));
+        return Optional.of(new Trazado(tramos, Math.round(ruta.distance() / 10) / 100.0, indicaciones));
     }
 
     /**

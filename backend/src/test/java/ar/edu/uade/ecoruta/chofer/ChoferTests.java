@@ -158,6 +158,101 @@ class ChoferTests {
     }
 
     @Test
+    void cadaParadaTraeLoQueMuestraLaApp() throws Exception {
+        empezarTurno();
+        llenarElSector(1);
+        emulador.avanzarPasos(3);
+        mvc.perform(get("/api/v1/chofer/turno").header("Authorization", "Bearer " + chofer))
+                .andExpect(jsonPath("$.ruta.paradas[0].llenado").isNumber())
+                .andExpect(jsonPath("$.ruta.paradas[0].tipo").isString())
+                .andExpect(jsonPath("$.ruta.paradas[0].barrio").isString())
+                .andExpect(jsonPath("$.propuesta").doesNotExist());
+    }
+
+    @Test
+    void laPosicionDelCelularMueveElCamionEnElPanel() throws Exception {
+        empezarRuta();
+        mvc.perform(post("/api/v1/chofer/posicion").header("Authorization", "Bearer " + chofer)
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"lat\":-34.6011,\"lng\":-58.3802}"))
+                .andExpect(status().isNoContent());
+        assertThat(jdbc.queryForObject("SELECT lat FROM camion WHERE id = 'C22'", Double.class)).isEqualTo(-34.6011);
+    }
+
+    @Test
+    void unContenedorQueSeVuelveUrgenteSeLeProponeAlChoferYSiAceptaEntraEnLaRuta() throws Exception {
+        empezarRuta();
+        int antes = jdbc.queryForObject("SELECT count(*) FROM parada p JOIN ruta r ON r.id = p.ruta_id "
+                + "WHERE r.camion_id = 'C22' AND r.estado = 'en_curso'", Integer.class);
+        String urgente = contenedorLibreDelSector(1);
+        emulador.llenar(urgente, 98);
+        emulador.avanzarPasos(1);
+
+        String turno = pedir(get("/api/v1/chofer/turno"));
+        assertThat((String) JsonPath.read(turno, "$.propuesta.contenedorId")).isEqualTo(urgente);
+        assertThat((Integer) JsonPath.read(turno, "$.propuesta.llenado")).isGreaterThanOrEqualTo(95);
+        Integer propuesta = JsonPath.read(turno, "$.propuesta.id");
+        int orden = JsonPath.read(turno, "$.propuesta.orden");
+
+        turno = pedir(post("/api/v1/chofer/propuestas/" + propuesta + "/aceptar"));
+        List<String> contenedores = JsonPath.read(turno, "$.ruta.paradas[*].contenedorId");
+        List<Integer> ordenes = JsonPath.read(turno, "$.ruta.paradas[*].orden");
+        assertThat(contenedores).hasSize(antes + 1);
+        assertThat(contenedores.get(orden - 1)).isEqualTo(urgente);
+        assertThat(ordenes).isSorted().doesNotHaveDuplicates();
+        assertThat((Object) JsonPath.read(turno, "$.propuesta")).isNull();
+    }
+
+    @Test
+    void siElChoferMantieneLaRutaElContenedorNoSeVuelveAProponer() throws Exception {
+        empezarRuta();
+        String urgente = contenedorLibreDelSector(1);
+        emulador.llenar(urgente, 98);
+        emulador.avanzarPasos(1);
+        Integer propuesta = JsonPath.read(pedir(get("/api/v1/chofer/turno")), "$.propuesta.id");
+
+        pedir(post("/api/v1/chofer/propuestas/" + propuesta + "/rechazar"));
+        emulador.avanzarPasos(2);
+        String turno = pedir(get("/api/v1/chofer/turno"));
+        List<String> contenedores = JsonPath.read(turno, "$.ruta.paradas[*].contenedorId");
+        assertThat(contenedores).doesNotContain(urgente);
+        if (JsonPath.<Object>read(turno, "$.propuesta") != null) {
+            assertThat((String) JsonPath.read(turno, "$.propuesta.contenedorId")).isNotEqualTo(urgente);
+        }
+    }
+
+    @Test
+    void elNoSePudoLlevaLaNotaYLaFotoAlOperador() throws Exception {
+        String turno = empezarRuta();
+        Integer parada = JsonPath.read(turno, "$.ruta.paradas[0].id");
+        String foto = "data:image/jpeg;base64," + java.util.Base64.getEncoder().encodeToString(new byte[] { 1, 2, 3 });
+        mvc.perform(post("/api/v1/chofer/paradas/" + parada + "/no-se-pudo").header("Authorization", "Bearer " + chofer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"Auto estacionado\",\"nota\":\"Patente AB123CD\",\"foto\":\"" + foto + "\"}"))
+                .andExpect(status().isOk());
+
+        String operador = token("operador", "operador123");
+        String incidentes = mvc.perform(get("/api/v1/incidentes?tipo=no_se_pudo").header("Authorization", "Bearer " + operador))
+                .andReturn().getResponse().getContentAsString();
+        assertThat((String) JsonPath.read(incidentes, "$[0].descripcion")).contains("Patente AB123CD");
+        assertThat((Boolean) JsonPath.read(incidentes, "$[0].tieneFoto")).isTrue();
+        Integer id = JsonPath.read(incidentes, "$[0].id");
+        byte[] imagen = mvc.perform(get("/api/v1/incidentes/" + id + "/foto").header("Authorization", "Bearer " + operador))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsByteArray();
+        assertThat(imagen).containsExactly(1, 2, 3);
+    }
+
+    @Test
+    void unaFotoQueNoEsImagenSeRechaza() throws Exception {
+        String turno = empezarRuta();
+        Integer parada = JsonPath.read(turno, "$.ruta.paradas[0].id");
+        mvc.perform(post("/api/v1/chofer/paradas/" + parada + "/no-se-pudo").header("Authorization", "Bearer " + chofer)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"motivo\":\"Auto estacionado\",\"foto\":\"data:text/html;base64,PHNjcmlwdD4=\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void sinMotivoNoSeAceptaElNoSePudo() throws Exception {
         mvc.perform(post("/api/v1/chofer/paradas/1/no-se-pudo").header("Authorization", "Bearer " + chofer)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"motivo\":\" \"}"))
@@ -174,6 +269,23 @@ class ChoferTests {
         String turno = pedir(get("/api/v1/chofer/turno"));
         assertThat((Boolean) JsonPath.read(turno, "$.manejadoPorApp")).isFalse();
         assertThat((String) JsonPath.read(turno, "$.ruta.estado")).isNotEqualTo("programada");
+    }
+
+    private String empezarRuta() throws Exception {
+        empezarTurno();
+        llenarElSector(1);
+        emulador.avanzarPasos(3);
+        return pedir(post("/api/v1/chofer/ruta/iniciar"));
+    }
+
+    // Un contenedor del sector que no está en ninguna ruta activa
+    private String contenedorLibreDelSector(int sectorId) {
+        return jdbc.queryForObject("""
+                SELECT c.id FROM contenedor c WHERE c.sector_id = ? AND c.id NOT IN (
+                    SELECT p.contenedor_id FROM parada p JOIN ruta r ON r.id = p.ruta_id
+                    WHERE r.estado <> 'terminada' AND p.estado = 'pendiente')
+                ORDER BY c.id DESC LIMIT 1
+                """, String.class, sectorId);
     }
 
     private void empezarTurno() throws Exception {

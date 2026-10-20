@@ -36,8 +36,16 @@ public class ServicioDeIncidentes {
 
     @Transactional
     public Incidente crearNoSePudo(Contenedor contenedor, Camion camion, String motivo, Instant ahora) {
+        return crearNoSePudo(contenedor, camion, motivo, null, ahora);
+    }
+
+    /** @param nota lo que escribió o dictó el chofer; puede venir vacía */
+    public Incidente crearNoSePudo(Contenedor contenedor, Camion camion, String motivo, String nota, Instant ahora) {
+        String descripcion = "El chofer reportó: " + motivo.toLowerCase() + "."
+                + (nota == null || nota.isBlank() ? "" : " Nota: " + nota.trim());
         return incidentes.save(new Incidente(Incidente.NO_SE_PUDO, contenedor, camion,
-                "El chofer reportó: " + motivo.toLowerCase() + ".", "Sumar a la próxima ruta", null, ahora));
+                descripcion.length() > 500 ? descripcion.substring(0, 497) + "..." : descripcion,
+                "Sumar a la próxima ruta", null, ahora));
     }
 
     @Transactional
