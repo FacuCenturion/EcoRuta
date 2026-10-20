@@ -15,6 +15,9 @@ import { BORDE_ESTIMADO, BORDE_ZONA, COLOR_NIVEL, OPACIDAD_ZONA } from '../../ut
 import InfoContenedor from './InfoContenedor';
 import type { PropsMapa, Vista } from './tipos';
 
+// El Map ID se crea gratis en Google Cloud; sin uno propio se usa el de prueba de Google
+const MAP_ID = (import.meta.env.VITE_GOOGLE_MAP_ID ?? '').trim() || 'DEMO_MAP_ID';
+
 // Mueve el mapa cuando cambia la vista (por ejemplo al filtrar por zona)
 function AjustarVista({ vista }: { vista: Vista }) {
   const mapa = useMap();
@@ -59,8 +62,7 @@ export default function MapaGoogle({
         className={className}
         defaultCenter={{ lat: vista.lat, lng: vista.lng }}
         defaultZoom={vista.zoom}
-        // Identificador de prueba de Google. Para producción conviene crear uno propio (gratis).
-        mapId="DEMO_MAP_ID"
+        mapId={MAP_ID}
         gestureHandling="greedy"
         clickableIcons={false}
         mapTypeControl={false}

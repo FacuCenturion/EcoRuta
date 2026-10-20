@@ -2,6 +2,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_GOOGLE_MAPS_API_KEY?: string;
+  readonly VITE_GOOGLE_MAP_ID?: string; // vacío: el de prueba de Google
   // Dirección de la API, por ejemplo http://localhost:8080/api/v1. Vacía: datos simulados en el navegador
   readonly VITE_API_URL?: string;
 }
