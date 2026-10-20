@@ -117,6 +117,7 @@ src/
   styles/       estilos globales
   utils/        funciones auxiliares (formatos, números aleatorios, colores)
 docs/           guía del equipo y lista de tareas
+chofer/         app del chofer (proyecto aparte, ver chofer/README.md)
 scripts/        generar_limites_zonas.py, arma limites-zonas.json a partir de los barrios del GCBA
 ```
 

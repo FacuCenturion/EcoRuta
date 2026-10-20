@@ -74,8 +74,11 @@ public class ConfiguracionSeguridad {
                         // Reiniciar la demo borra lo que pasó: solo el director
                         .requestMatchers(HttpMethod.POST, "/api/v1/simulacion/reiniciar").hasRole("DIRECTOR")
                         .requestMatchers("/api/v1/indicadores", "/api/v1/indicadores/**").hasRole("DIRECTOR")
-                        // Todo lo demás es del panel. Los endpoints del chofer se agregan
-                        // arriba de esta línea cuando existan.
+                        // La app del chofer: cada chofer ve y maneja solo su camión
+                        .requestMatchers("/api/v1/chofer/**").hasRole("CHOFER")
+                        // Los avisos en vivo son para el panel y para la app del chofer
+                        .requestMatchers(HttpMethod.GET, "/api/v1/eventos").hasAnyRole("DIRECTOR", "OPERADOR", "CHOFER")
+                        // Todo lo demás es del panel
                         .requestMatchers("/api/v1/**").hasAnyRole("DIRECTOR", "OPERADOR")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth

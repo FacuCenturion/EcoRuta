@@ -3,6 +3,7 @@ package ar.edu.uade.ecoruta.rutas;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import ar.edu.uade.ecoruta.comun.Coordenada;
 import ar.edu.uade.ecoruta.comun.Fechas;
 
 public record RutaDto(long id, String camionId, int camionNumero, int zonaId, int sectorId, String estado, String origen,
@@ -15,11 +16,12 @@ public record RutaDto(long id, String camionId, int camionNumero, int zonaId, in
      * @param motivoVisita por qué pasa el camión: llenado, riesgo, reporte, tiempo o de_paso
      * @param motivo       por qué no se pudo recolectar (solo en las que quedaron no_se_pudo)
      */
-    public record ParadaDto(long id, String contenedorId, String direccion, int orden, String estado,
+    public record ParadaDto(long id, String contenedorId, String direccion, Coordenada posicion, int orden, String estado,
             String motivoVisita, OffsetDateTime eta, OffsetDateTime horaReal, String motivo) {
 
         public static ParadaDto de(Parada p) {
-            return new ParadaDto(p.getId(), p.getContenedor().getId(), p.getContenedor().getDireccion(), p.getOrden(),
+            return new ParadaDto(p.getId(), p.getContenedor().getId(), p.getContenedor().getDireccion(),
+                    p.getContenedor().posicion(), p.getOrden(),
                     p.getEstado(), p.getMotivoVisita(), Fechas.enBuenosAires(p.getEta()), Fechas.enBuenosAires(p.getHoraReal()),
                     p.getMotivo());
         }

@@ -20,6 +20,10 @@ import ar.edu.uade.ecoruta.zonas.ZonaRepositorio;
 @Service
 public class ServicioDeRutas {
 
+    /** Lo que puede elegir el chofer cuando no pudo vaciar un contenedor. Los usa también el emulador. */
+    public static final java.util.List<String> MOTIVOS_NO_SE_PUDO = java.util.List.of("Auto estacionado",
+            "Obra o calle cortada", "Contenedor dañado", "Basura fuera del contenedor", "Sensor marca mal");
+
     private final ZonaRepositorio zonas;
     private final ServicioDeIncidentes incidentes;
 

@@ -14,7 +14,7 @@ El backend del panel está completo y el panel ya puede funcionar con él. Sin l
 | Simulación de sensores con todos los casos (fallas, trabado, eventos, reportes) | Hecho, en `main` |
 | Panel conectado al backend, con avisos en vivo (SSE) en lugar de preguntar cada tantos segundos | Hecho, rama `feature/conectar-panel` |
 | Rutas que siguen las calles (OSRM, sin Google) | Hecho, rama `feature/conectar-panel` |
-| App del chofer (web que se instala en el celular) | Sin empezar, se divide en mini sprints |
+| App del chofer (web que se instala en el celular, carpeta `chofer/`) | Versión funcional, rama `feature/app-chofer`; falta el diseño final |
 | Demo publicada y cierre | Sin empezar |
 
 Decisiones tomadas:
@@ -104,8 +104,8 @@ Sprint 3, un bloque por integrante:
 Lo que falta de la Sprint 3 (antes estaba en las Sprints 4 y 5):
 
 - [ ] Hora de salida con menos tráfico: con una tabla simulada por hora (sin Google por ahora)
-- [ ] Aviso al chofer cuando se le asigna una ruta, por el mismo canal de eventos (sin Firebase)
-- [ ] Endpoints de la app del chofer: ver la ruta, iniciarla, confirmar cada parada y reportar "no se pudo"
+- [x] Aviso al chofer cuando se le asigna una ruta, por el mismo canal de eventos (sin Firebase)
+- [x] Endpoints de la app del chofer: ver la ruta, iniciarla, confirmar cada parada y reportar "no se pudo"
 - [ ] Aviso al operador si el chofer no inicia la ruta a los 10 minutos
 - [x] Indicadores calculados desde la base (resumen diario y ruta fija calculada con las mismas lecturas)
 - [x] Decidir la ruta fija de referencia de los indicadores: 3 rondas por día (la más real)
@@ -113,12 +113,14 @@ Lo que falta de la Sprint 3 (antes estaba en las Sprints 4 y 5):
 
 ## Fase 6: App del chofer (se divide en mini sprints)
 
-- [x] Elegir la tecnología: una web que se instala en el celular (PWA)
-- [ ] Recibir la notificación de ruta nueva y abrir la ruta
-- [ ] Pantalla "Tu ruta de hoy" con las paradas ordenadas
-- [ ] Navegación y confirmación de cada contenedor recolectado
-- [ ] Reporte "No se pudo recolectar" con motivo
-- [ ] Aviso de nueva parada prioritaria
+- [x] Elegir la tecnología: una web que se instala en el celular (PWA), en la carpeta `chofer/`
+- [x] Mini sprint A, backend: turno con la app, iniciar la ruta, vaciado y "no se pudo"; el emulador deja de manejar ese camión
+- [x] Mini sprint B, pantallas: login, empezar turno, ruta nueva, parada actual con "Cómo llegar", mapa por las calles y lista de paradas
+- [x] Mini sprint C, aviso de ruta nueva con la app abierta o en segundo plano (vibra y notifica); se puede instalar en el celular
+- [ ] Ajustar las pantallas al diseño del equipo
+- [ ] Notificaciones con la app cerrada (Web Push)
+- [ ] Mini sprint D: aviso al operador si el chofer no inicia la ruta a los 10 minutos
+- [ ] Probarla en celulares reales (Android e iPhone) con la señal de la calle
 
 ## Fase 7: Reportes vecinales reales
 

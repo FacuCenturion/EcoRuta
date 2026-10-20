@@ -63,8 +63,12 @@ public class ServicioDeDespacho {
         Set<String> ocupados = camionesConRutaActiva();
         Map<Integer, Zona> zonaPorId = zonas.findAll().stream().collect(Collectors.toMap(Zona::getId, Function.identity()));
 
+        // Dentro de cada sector elige primero el camión del chofer que tiene la app abierta
         return camiones.findAllByOrderByZonaId().stream()
                 .filter(camion -> camion.getEstado().equals(Camion.EN_BASE) && !ocupados.contains(camion.getId()))
+                .sorted(java.util.Comparator.comparing(Camion::getSectorId)
+                        .thenComparing((Camion c) -> !c.isManejadoPorApp())
+                        .thenComparing(Camion::getNumero))
                 .map(camion -> {
                     List<Contenedor> deLaZona = contenedores.findBySectorIdAndActivoTrueOrderById(camion.getSectorId());
                     Map<String, Evaluacion> evaluaciones = prioridad.evaluar(deLaZona, ahora);
@@ -86,9 +90,10 @@ public class ServicioDeDespacho {
         Sector sector = sectores.findById(sectorId).orElseThrow(
                 () -> new RecursoNoEncontradoException("SECTOR_NO_EXISTE", "No existe el sector " + sectorId + "."));
         Set<String> ocupados = camionesConRutaActiva();
+        // Si en el sector hay un chofer con el turno abierto en la app, la ruta es para él
         Camion camion = camiones.findBySectorId(sectorId).stream()
                 .filter(c -> c.getEstado().equals(Camion.EN_BASE) && !ocupados.contains(c.getId()))
-                .findFirst()
+                .min(java.util.Comparator.comparing((Camion c) -> !c.isManejadoPorApp()).thenComparing(Camion::getNumero))
                 .orElseThrow(() -> new EstadoInvalidoException("CAMION_OCUPADO",
                         "El camión de " + sector.getNombre() + " ya tiene una ruta o todavía no volvió a la base."));
 

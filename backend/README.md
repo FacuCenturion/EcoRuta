@@ -167,6 +167,14 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | POST | `/simulacion` | Pausar o acelerar la demo. Body: `enPausa`, `velocidad` (1 a 20) |
 | POST | `/simulacion/reiniciar` | Solo el director. Vuelve la demo al punto de partida |
 | POST | `/simulacion/casos` | Dispara un caso de la simulación para la demo (ver arriba) |
+| GET | `/chofer/turno` | Solo choferes. Su camión, si tiene el turno abierto en la app y su ruta más nueva con las paradas |
+| POST | `/chofer/turno/empezar` | Desde ahora el camión lo maneja el chofer con la app, no el emulador |
+| POST | `/chofer/turno/terminar` | Vuelve a manejarlo el emulador (si queda una ruta a medio hacer, la termina él) |
+| POST | `/chofer/ruta/iniciar` | Inicia la ruta asignada |
+| POST | `/chofer/paradas/{id}/recolectar` | Vació el contenedor |
+| POST | `/chofer/paradas/{id}/no-se-pudo` | No pudo vaciarlo. Body: `motivo`. Crea un incidente para el operador |
+| GET | `/chofer/ruta/trazado` | El recorrido por las calles de su ruta |
+| GET | `/chofer/motivos` | Los motivos de "no se pudo" que ofrece la app |
 | GET | `/eventos` | Avisos en vivo (Server-Sent Events): evento `actualizacion` cada vez que algo cambió, como mucho uno por segundo |
 
 **Avisos en vivo.** El panel no pregunta cada tantos segundos: abre `/eventos` una vez y el servidor le avisa cuando hay datos nuevos (después de cada paso del emulador y de cualquier pedido que cambie algo). El aviso solo trae la hora del sistema; al recibirlo, el panel vuelve a pedir lo que muestra. Varios cambios seguidos se juntan en un solo aviso por segundo, así a velocidad 20 el panel no pide todo cinco veces por segundo. Usa el mismo token que el resto, en el header `Authorization` (por eso el panel no usa `EventSource`, que no deja mandar headers). Para verlo desde la terminal: `curl -N http://localhost:8080/api/v1/eventos -H "Authorization: Bearer $TOKEN"`.
@@ -209,7 +217,7 @@ Todas tienen un valor por defecto para desarrollo, en `src/main/resources/applic
 | --- | --- | --- |
 | `PUERTO` | Puerto de la API | `8080` |
 | `DB_URL`, `DB_USER`, `DB_PASSWORD` | Conexión a PostgreSQL | `jdbc:postgresql://localhost:5432/ecoruta`, `ecoruta`, `ecoruta` |
-| `CORS_ORIGENES` | Desde dónde puede llamar el front | `http://localhost:5173` |
+| `CORS_ORIGENES` | Desde dónde pueden llamar el panel y la app del chofer | `http://localhost:5173,http://localhost:5174` |
 | `SENSORES_API_KEY` | Clave del header `X-Api-Key` del emulador | `clave-de-desarrollo` |
 | `EMULADOR_ACTIVO` | Prende el emulador de sensores y choferes | `true` |
 | `JWT_SECRETO` | Clave con la que se firman los tokens (32 caracteres o más) | Una de desarrollo; cambiarla al publicar la demo |

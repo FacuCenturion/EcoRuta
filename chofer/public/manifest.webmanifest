@@ -1,0 +1,17 @@
+{
+  "name": "EcoRuta Chofer",
+  "short_name": "EcoRuta",
+  "description": "Tu ruta de recolección del día, parada por parada.",
+  "lang": "es-AR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#efebe0",
+  "theme_color": "#2c3526",
+  "icons": [
+    { "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icono-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

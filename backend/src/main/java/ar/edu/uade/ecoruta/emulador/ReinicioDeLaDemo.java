@@ -61,6 +61,8 @@ public class ReinicioDeLaDemo {
                            estado_sensor = 'funcionando', nivel_estimado = NULL, ultima_recoleccion_at = NULL,
                            desborde_desde = NULL
                     """);
+            // Los turnos abiertos en la app del chofer siguen abiertos: así, en la demo, la primera
+            // ruta después de reiniciar le llega al chofer como ruta nueva
             jdbc.update("""
                     UPDATE camion k SET estado = 'en_base', carga_pct = 0, km_recorridos_hoy = 0,
                            lat = z.base_lat, lng = z.base_lng

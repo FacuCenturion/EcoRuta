@@ -1,0 +1,486 @@
+/* Misma paleta que el panel (src/styles/global.css en la raíz). Pensada para el celular:
+   botones grandes, una acción por vez y contraste alto para leer al sol. */
+:root {
+  --bosque: #2c3526;
+  --bosque-suave: #3a4633;
+  --salvia: #8ba67c;
+  --salvia-clara: #c9d6bd;
+  --ambar: #a07a2c;
+  --ambar-claro: #ecd9a3;
+  --ladrillo: #9b4a36;
+  --azul: #2f6fd6;
+  --crema: #efebe0;
+  --papel: #fbf7ef;
+  --linea: #e3dccb;
+  --texto: #25301f;
+  --texto-suave: #6b7260;
+  --radio: 14px;
+  --fuente: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fuente-titulo: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--crema);
+}
+
+body {
+  font-family: var(--fuente);
+  font-size: 16px;
+  line-height: 1.4;
+  color: var(--texto);
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+h1,
+h2 {
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+h1 {
+  font-size: 26px;
+}
+
+h2 {
+  font-size: 20px;
+}
+
+h2 small {
+  font-family: var(--fuente);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--texto-suave);
+  margin-left: 6px;
+}
+
+/* ---------- Estructura ---------- */
+
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(12px + env(safe-area-inset-top)) 16px 12px;
+  background: var(--bosque);
+  color: var(--papel);
+}
+
+.cabecera strong {
+  display: block;
+  font-family: var(--fuente-titulo);
+  font-size: 22px;
+}
+
+.cabecera small {
+  color: var(--salvia-clara);
+  font-size: 13px;
+}
+
+.cabecera__derecha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reloj {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.conexion {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.conexion--si {
+  background: var(--salvia);
+}
+
+.conexion--no {
+  background: var(--ladrillo);
+}
+
+.contenido {
+  flex: 1;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  background: var(--papel);
+  border: 1px solid var(--linea);
+  border-radius: var(--radio);
+}
+
+.tarjeta--destacada {
+  border: 2px solid var(--azul);
+  box-shadow: 0 4px 18px rgba(47, 111, 214, 0.18);
+}
+
+.tarjeta--parada h1 {
+  font-size: 30px;
+}
+
+.tarjeta--mapa {
+  padding: 0;
+  overflow: hidden;
+}
+
+.mapa {
+  height: 260px;
+  width: 100%;
+}
+
+.nota {
+  color: var(--texto-suave);
+  font-size: 14px;
+}
+
+.centrada {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.etiqueta {
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--azul);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.aviso {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--ambar-claro);
+  color: #5a4310;
+  font-size: 14px;
+}
+
+.error {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f3d9d2;
+  color: #6e2a1b;
+  font-size: 14px;
+}
+
+/* ---------- Botones ---------- */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.boton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.boton--principal {
+  background: var(--bosque);
+  color: var(--papel);
+}
+
+.boton--secundario {
+  background: transparent;
+  color: var(--bosque);
+  border: 2px solid var(--bosque);
+}
+
+.boton--alerta {
+  background: var(--ambar);
+  color: #fff;
+}
+
+.boton--chico {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 14px;
+  background: transparent;
+  color: var(--papel);
+  border: 1px solid var(--bosque-suave);
+}
+
+.boton--ancho {
+  width: 100%;
+}
+
+.acciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.progreso {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--linea);
+  overflow: hidden;
+}
+
+.progreso span {
+  display: block;
+  height: 100%;
+  background: var(--salvia);
+}
+
+/* ---------- Paradas ---------- */
+
+.paradas {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.parada {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--linea);
+}
+
+.parada:first-child {
+  border-top: 0;
+}
+
+.parada__numero {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--crema);
+  font-weight: 700;
+}
+
+.parada--recolectada .parada__numero {
+  background: var(--salvia);
+  color: #fff;
+}
+
+.parada--no_se_pudo .parada__numero {
+  background: var(--ambar);
+  color: #fff;
+}
+
+.parada--proxima .parada__numero {
+  background: var(--azul);
+  color: #fff;
+}
+
+.parada--recolectada .parada__texto strong {
+  color: var(--texto-suave);
+}
+
+.parada__texto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.parada__texto small {
+  color: var(--texto-suave);
+  font-size: 13px;
+}
+
+.parada__hora {
+  color: var(--texto-suave);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Marcas del mapa ---------- */
+
+.pin {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: var(--bosque);
+  color: #fff;
+  font: 700 13px var(--fuente);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+}
+
+.pin--recolectada {
+  background: var(--salvia);
+}
+
+.pin--no_se_pudo {
+  background: var(--ambar);
+}
+
+.pin--proxima {
+  background: var(--azul);
+  transform: scale(1.2);
+}
+
+.pin--base {
+  background: var(--texto-suave);
+}
+
+.pin--camion {
+  background: #fff;
+  border-color: var(--bosque);
+  font-size: 15px;
+}
+
+/* ---------- Hoja de "no se pudo" ---------- */
+
+.fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(37, 48, 31, 0.5);
+}
+
+.hoja {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+  background: var(--papel);
+  border-radius: 18px 18px 0 0;
+}
+
+.opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.opcion {
+  min-height: 52px;
+  padding: 0 14px;
+  border: 2px solid var(--linea);
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  font-size: 17px;
+  text-align: left;
+  color: var(--texto);
+}
+
+.opcion--elegida {
+  border-color: var(--ambar);
+  background: var(--ambar-claro);
+  font-weight: 600;
+}
+
+textarea,
+input {
+  width: 100%;
+  min-height: 52px;
+  padding: 12px 14px;
+  border: 2px solid var(--linea);
+  border-radius: 12px;
+  font: inherit;
+  font-size: 17px;
+  background: #fff;
+}
+
+/* ---------- Login ---------- */
+
+.login {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--fuente-titulo);
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.marca small {
+  font-family: var(--fuente);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ambar);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.marca__logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: url('/icono.svg') center / cover;
+}
+
+.formulario label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+}

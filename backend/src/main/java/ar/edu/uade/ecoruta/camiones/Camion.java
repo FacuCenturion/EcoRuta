@@ -51,6 +51,10 @@ public class Camion {
     @Column(name = "km_recorridos_hoy")
     private BigDecimal kmRecorridosHoy;
 
+    // Lo maneja un chofer con la app; si no, el emulador hace de chofer
+    @Column(name = "manejado_por_app")
+    private boolean manejadoPorApp;
+
     protected Camion() {
     }
 
@@ -89,6 +93,18 @@ public class Camion {
     public void quedarDisponible() {
         estado = EN_BASE;
         cargaPct = 0;
+    }
+
+    public void empezarTurnoConLaApp() {
+        manejadoPorApp = true;
+    }
+
+    public void terminarTurnoConLaApp() {
+        manejadoPorApp = false;
+    }
+
+    public boolean isManejadoPorApp() {
+        return manejadoPorApp;
     }
 
     public void reiniciarKmDelDia() {

@@ -86,8 +86,7 @@ public class EmuladorDeSensores {
     static final String CONGELADO = ServicioDeEstadoDeSensores.CONGELADO;
     static final String TRABADO = ServicioDeEstadoDeSensores.TRABADO;
 
-    private static final List<String> MOTIVOS_NO_SE_PUDO = List.of("Auto estacionado", "Obra o calle cortada",
-            "Contenedor dañado", "Basura fuera del contenedor", "Sensor marca mal");
+    private static final List<String> MOTIVOS_NO_SE_PUDO = ServicioDeRutas.MOTIVOS_NO_SE_PUDO;
     private static final List<String> COMENTARIOS_VECINALES = List.of(
             "Hay bolsas tiradas al lado del contenedor.", "El contenedor está lleno y huele mal.",
             "Se desbordó y no entra más basura.", "Hay residuos desparramados en la vereda.");
@@ -378,11 +377,13 @@ public class EmuladorDeSensores {
     }
 
     // El emulador hace de chofer: inicia la ruta que le asignaron y va de parada en parada.
+    // Si el chofer usa la app, la ruta la inicia y la recorre él; el emulador solo hace pasar
+    // el tiempo de descarga y de demora.
     private void moverCamion(Camion camion, Ruta ruta, Instant ahora, List<LecturaNueva> trasRecoleccion) {
         String id = camion.getId();
         switch (camion.getEstado()) {
             case Camion.EN_BASE -> {
-                if (ruta != null && ruta.getEstado().equals(Ruta.PROGRAMADA)) {
+                if (!camion.isManejadoPorApp() && ruta != null && ruta.getEstado().equals(Ruta.PROGRAMADA)) {
                     servicioDeRutas.iniciar(ruta, ahora);
                     minutosDelCamion.put(id, 0.0);
                 }
@@ -402,7 +403,9 @@ public class EmuladorDeSensores {
                     camion.quedarDisponible(); // quedó en ruta sin ruta (reinicio a mitad de camino)
                     return;
                 }
-                recorrer(camion, ruta, ahora, trasRecoleccion);
+                if (!camion.isManejadoPorApp()) {
+                    recorrer(camion, ruta, ahora, trasRecoleccion);
+                }
             }
             default -> log.warn("Estado de camión desconocido: {}", camion.getEstado());
         }
@@ -427,24 +430,46 @@ public class EmuladorDeSensores {
             }
             int antesDeVaciar = contenedor.getLlenado();
             servicioDeRutas.recolectar(ruta, parada, ahora);
-            String id = contenedor.getId();
-            int nivel = (int) Math.round(entre(2, 6));
-            nivelReal.put(id, (double) nivel);
-            revuelvenHasta.remove(id);
-
-            // A veces el sensor se traba al vaciar el contenedor y sigue marcando lo de antes
-            if (falla.get(id).equals(SIN_FALLA)
-                    && (trabarAlVaciar.remove(id) || azar.nextDouble() < PROBABILIDAD_SENSOR_TRABADO)) {
-                falla.put(id, TRABADO);
-                valorTrabado.put(id, antesDeVaciar);
-                reparaEn.put(id, ahora.plus(Duration.ofMinutes(Math.round(entre(4, 12) * 60))));
-            }
-            // Un sensor sano informa enseguida que lo vaciaron; uno caído o trabado, no
-            if (falla.get(id).equals(SIN_FALLA)) {
-                trasRecoleccion.add(new LecturaNueva(id, nivel, ahora.plusSeconds(1)));
-            }
+            vaciar(contenedor.getId(), antesDeVaciar, ahora, trasRecoleccion);
         }
         minutosDelCamion.put(camion.getId(), ruta.proximaParada().isPresent() ? minutos : 0.0);
+    }
+
+    // Lo que pasa en el mundo cuando se vacía un contenedor: queda casi vacío y su sensor,
+    // si anda, informa enseguida el nivel nuevo
+    private void vaciar(String id, int antesDeVaciar, Instant ahora, List<LecturaNueva> trasRecoleccion) {
+        int nivel = (int) Math.round(entre(2, 6));
+        nivelReal.put(id, (double) nivel);
+        revuelvenHasta.remove(id);
+
+        // A veces el sensor se traba al vaciar el contenedor y sigue marcando lo de antes
+        if (falla.get(id).equals(SIN_FALLA)
+                && (trabarAlVaciar.remove(id) || azar.nextDouble() < PROBABILIDAD_SENSOR_TRABADO)) {
+            falla.put(id, TRABADO);
+            valorTrabado.put(id, antesDeVaciar);
+            reparaEn.put(id, ahora.plus(Duration.ofMinutes(Math.round(entre(4, 12) * 60))));
+        }
+        // Un sensor sano informa enseguida que lo vaciaron; uno caído o trabado, no
+        if (falla.get(id).equals(SIN_FALLA)) {
+            trasRecoleccion.add(new LecturaNueva(id, nivel, ahora.plusSeconds(1)));
+        }
+    }
+
+    /**
+     * Un chofer real (con la app) vació un contenedor: el mundo simulado se entera, así el
+     * sensor deja de marcar lleno. Se llama después de guardar la recolección, nunca desde
+     * adentro de esa transacción: si no, el pedido y un paso del emulador podrían esperarse
+     * uno al otro (uno tiene filas de la base, el otro el turno del emulador).
+     */
+    public void vaciadoPorElChofer(String contenedorId, int antesDeVaciar, Instant ahora) {
+        synchronized (turno) {
+            if (!nivelReal.containsKey(contenedorId)) {
+                return;
+            }
+            List<LecturaNueva> lectura = new ArrayList<>();
+            vaciar(contenedorId, antesDeVaciar, ahora, lectura);
+            transaccion.executeWithoutResult(estado -> servicioDeLecturas.registrar(lectura));
+        }
     }
 
     // ---------- Casos que se disparan a pedido para la demo ----------
