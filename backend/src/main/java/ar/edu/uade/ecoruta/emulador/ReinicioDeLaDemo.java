@@ -14,6 +14,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import ar.edu.uade.ecoruta.comun.RelojDelSistema;
 import ar.edu.uade.ecoruta.contenedores.PatronesDeLlenado;
 import ar.edu.uade.ecoruta.indicadores.ServicioDeIndicadores;
+import ar.edu.uade.ecoruta.rutas.ServicioDeTrazado;
 
 /**
  * Vuelve la demo al punto de partida sin recrear la base: borra lo que pasó (lecturas, rutas,
@@ -34,9 +35,12 @@ public class ReinicioDeLaDemo {
     private final PatronesDeLlenado patrones;
     private final ServicioDeIndicadores indicadores;
     private final TransactionTemplate transaccion;
+    private final ServicioDeTrazado trazado;
 
     ReinicioDeLaDemo(EmuladorDeSensores emulador, JdbcTemplate jdbc, EntityManager entidades, RelojDelSistema reloj,
-            PatronesDeLlenado patrones, ServicioDeIndicadores indicadores, TransactionTemplate transaccion) {
+            PatronesDeLlenado patrones, ServicioDeIndicadores indicadores, TransactionTemplate transaccion,
+            ServicioDeTrazado trazado) {
+        this.trazado = trazado;
         this.indicadores = indicadores;
         this.patrones = patrones;
         this.emulador = emulador;
@@ -68,6 +72,7 @@ public class ReinicioDeLaDemo {
             reloj.recargar();
             patrones.olvidar();
             indicadores.olvidar();
+            trazado.olvidar(); // las rutas se vuelven a numerar desde 1
             emulador.olvidar();
             emulador.preparar();
             return reloj.ahora();

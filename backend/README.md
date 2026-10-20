@@ -153,6 +153,7 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | GET | `/camiones/{id}` | Un camión con su ruta más nueva |
 | GET | `/rutas` | Rutas del día. Filtros: `zonaId`, `estado` |
 | GET | `/rutas/{id}` | Una ruta con sus paradas |
+| GET | `/rutas/{id}/trazado` | El recorrido por las calles, un tramo por cada tramo de la ruta (base, paradas, base), y los km por calle. La primera vez responde `calculando` y avisa por `/eventos` cuando está listo |
 | POST | `/rutas/planificar` | Despacho manual: manda ahora el camión de un sector. Body: `sectorId` |
 | GET | `/incidentes` | Incidentes. Filtros: `zonaId`, `sectorId`, `tipo`, `estado` |
 | GET | `/incidentes/{id}` | Un incidente |
@@ -196,6 +197,10 @@ La primera vez que arranca la demo se generan 8 semanas de resúmenes previos co
 | Desbordes | 0 | 641 | 17 |
 | Vaciados con menos de 50% | 96% | 47% | 5% |
 
+**Decisión (19/10):** se compara contra la ruta fija de 3 rondas. La ronda nocturna acumula demasiada basura durante el día y no representa cómo se trabaja de verdad; la comparación tiene que ser contra lo más real.
+
+Los km de las dos rutas se calculan en línea recta entre paradas, para que la comparación sea pareja. Por las calles los recorridos son bastante más largos (en una ruta de ejemplo, 10,9 km contra 4,0 km en línea recta, por las manos de las calles), así que los km absolutos de los indicadores subestiman lo que se recorre; la proporción entre fija y dinámica es lo que vale.
+
 ### Variables de entorno
 
 Todas tienen un valor por defecto para desarrollo, en `src/main/resources/application.properties`.
@@ -208,6 +213,9 @@ Todas tienen un valor por defecto para desarrollo, en `src/main/resources/applic
 | `SENSORES_API_KEY` | Clave del header `X-Api-Key` del emulador | `clave-de-desarrollo` |
 | `EMULADOR_ACTIVO` | Prende el emulador de sensores y choferes | `true` |
 | `JWT_SECRETO` | Clave con la que se firman los tokens (32 caracteres o más) | Una de desarrollo; cambiarla al publicar la demo |
+| `OSRM_URL` | Servidor OSRM para las rutas por las calles. Vacía: rutas en línea recta | `https://router.project-osrm.org` (el público de demostración) |
+
+**Rutas por las calles.** Se piden a OSRM (gratis, sin clave) la primera vez que alguien mira una ruta, no al crearla, y quedan guardadas en `ruta.trazado`. Así, con la simulación acelerada, no se piden cientos de rutas que nadie ve. Los pedidos salen de a uno, con un segundo entre cada uno, que es lo que pide el servidor público. Si OSRM no responde, el panel dibuja líneas rectas y se vuelve a intentar al minuto. Para la demo publicada conviene levantar un OSRM propio con el mapa de Argentina y apuntar `OSRM_URL` ahí.
 
 ## Pruebas
 

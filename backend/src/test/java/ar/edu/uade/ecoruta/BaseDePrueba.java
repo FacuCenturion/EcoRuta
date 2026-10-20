@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Import;
         "spring.flyway.clean-disabled=false",
         "ecoruta.emulador.activo=true",
         "ecoruta.emulador.automatico=false",
+        "ecoruta.osrm.url=", // las pruebas no salen a internet
 })
 @Import({ TestcontainersConfiguration.class, BaseLimpia.class })
 @EnabledIf("ar.edu.uade.ecoruta.DisponibilidadDeBase#hayBase")

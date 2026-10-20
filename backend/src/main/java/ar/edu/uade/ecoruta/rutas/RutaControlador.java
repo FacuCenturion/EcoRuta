@@ -30,8 +30,11 @@ public class RutaControlador {
     private final RutaRepositorio rutas;
     private final ServicioDeDespacho despacho;
     private final RelojDelSistema reloj;
+    private final ServicioDeTrazado trazado;
 
-    RutaControlador(RutaRepositorio rutas, ServicioDeDespacho despacho, RelojDelSistema reloj) {
+    RutaControlador(RutaRepositorio rutas, ServicioDeDespacho despacho, RelojDelSistema reloj,
+            ServicioDeTrazado trazado) {
+        this.trazado = trazado;
         this.rutas = rutas;
         this.despacho = despacho;
         this.reloj = reloj;
@@ -49,6 +52,15 @@ public class RutaControlador {
     public RutaDto buscar(@PathVariable long id) {
         return rutas.conParadas(id).map(RutaDto::de).orElseThrow(
                 () -> new RecursoNoEncontradoException("RUTA_NO_EXISTE", "No existe la ruta " + id + "."));
+    }
+
+    /**
+     * El recorrido por las calles, un tramo por cada tramo de la ruta. La primera vez responde
+     * "calculando" y, cuando está listo, llega un aviso por /eventos.
+     */
+    @GetMapping("/{id}/trazado")
+    public ServicioDeTrazado.TrazadoDto trazado(@PathVariable long id) {
+        return trazado.consultar(id);
     }
 
     /** Despacho manual: el operador manda ahora el camión de un sector. */
