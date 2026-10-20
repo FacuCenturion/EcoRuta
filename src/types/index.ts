@@ -108,6 +108,7 @@ export interface Incidente {
   creadoMs: number;
   camionNumero?: number;
   origen?: string; // por ejemplo "Boti" en los reportes vecinales
+  tieneFoto?: boolean; // el chofer sacó una foto (solo con backend)
 }
 
 export interface EstadoSimulacion {

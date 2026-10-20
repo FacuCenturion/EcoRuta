@@ -79,6 +79,7 @@ export interface IncidenteApi {
   creado: string;
   camionNumero: number | null;
   origen: string | null;
+  tieneFoto?: boolean;
 }
 
 export interface SimulacionApi {
@@ -208,6 +209,7 @@ export function aIncidente(i: IncidenteApi): Incidente {
     creadoMs: aMs(i.creado),
     camionNumero: i.camionNumero ?? undefined,
     origen: i.origen ?? undefined,
+    tieneFoto: i.tieneFoto ?? false,
   };
 }
 

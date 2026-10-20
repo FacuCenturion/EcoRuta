@@ -1,3 +1,4 @@
+import { abrirImagen } from '../api/cliente';
 import { useSimulacion } from '../context/SimulacionContext';
 import { esAbierto } from '../logic/indicadores';
 import type { Incidente } from '../types';
@@ -53,6 +54,11 @@ export function FilaIncidente({ incidente }: { incidente: Incidente }) {
           </>
         ) : (
           <span className={`estado estado--${incidente.estado}`}>{ETIQUETA_ESTADO[incidente.estado]}</span>
+        )}
+        {incidente.tieneFoto && (
+          <button type="button" className="boton" onClick={() => abrirImagen(`/incidentes/${incidente.id}/foto`)}>
+            Ver foto
+          </button>
         )}
         <small>{formatearHora(incidente.creadoMs)}</small>
       </div>

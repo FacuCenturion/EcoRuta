@@ -157,6 +157,7 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | POST | `/rutas/planificar` | Despacho manual: manda ahora el camión de un sector. Body: `sectorId` |
 | GET | `/incidentes` | Incidentes. Filtros: `zonaId`, `sectorId`, `tipo`, `estado` |
 | GET | `/incidentes/{id}` | Un incidente |
+| GET | `/incidentes/{id}/foto` | La foto que sacó el chofer, si la hay (`tieneFoto` en la lista) |
 | POST | `/incidentes/{id}/decision` | El operador confirma o descarta. Body: `decision` |
 | GET | `/reportes-vecinales` | Los incidentes que vienen de vecinos. Filtros: `zonaId`, `estado` |
 | POST | `/reportes-vecinales` | Carga un reporte. Body: `contenedorId`, `comentario` |
@@ -172,8 +173,11 @@ Todos van bajo `/api/v1`. Salvo el login y las lecturas, piden el token de direc
 | POST | `/chofer/turno/terminar` | Vuelve a manejarlo el emulador (si queda una ruta a medio hacer, la termina él) |
 | POST | `/chofer/ruta/iniciar` | Inicia la ruta asignada |
 | POST | `/chofer/paradas/{id}/recolectar` | Vació el contenedor |
-| POST | `/chofer/paradas/{id}/no-se-pudo` | No pudo vaciarlo. Body: `motivo`. Crea un incidente para el operador |
-| GET | `/chofer/ruta/trazado` | El recorrido por las calles de su ruta |
+| POST | `/chofer/paradas/{id}/no-se-pudo` | No pudo vaciarlo. Body: `motivo`, `nota` y `foto` (opcionales; la foto como data URL de menos de 1 MB). Crea un incidente para el operador |
+| POST | `/chofer/posicion` | Dónde está el camión según el celular (`lat`, `lng`). La app la manda cada 5 segundos en ruta |
+| POST | `/chofer/propuestas/{id}/aceptar` | Suma a la ruta la parada nueva que propuso el sistema |
+| POST | `/chofer/propuestas/{id}/rechazar` | Mantiene la ruta: el contenedor espera al próximo despacho |
+| GET | `/chofer/ruta/trazado` | El recorrido por las calles de su ruta, con las indicaciones giro a giro |
 | GET | `/chofer/motivos` | Los motivos de "no se pudo" que ofrece la app |
 | GET | `/eventos` | Avisos en vivo (Server-Sent Events): evento `actualizacion` cada vez que algo cambió, como mucho uno por segundo |
 
@@ -222,6 +226,8 @@ Todas tienen un valor por defecto para desarrollo, en `src/main/resources/applic
 | `EMULADOR_ACTIVO` | Prende el emulador de sensores y choferes | `true` |
 | `JWT_SECRETO` | Clave con la que se firman los tokens (32 caracteres o más) | Una de desarrollo; cambiarla al publicar la demo |
 | `OSRM_URL` | Servidor OSRM para las rutas por las calles. Vacía: rutas en línea recta | `https://router.project-osrm.org` (el público de demostración) |
+
+**Paradas nuevas con el camión en ruta.** En cada paso, si un contenedor del sector se vuelve urgente (pasa el 95% o se pronostica que desborda en menos de una hora y media) y no está en ninguna ruta, se le propone al chofer que maneja con la app sumarlo donde menos desvío agrega. Se propone antes de despachar otro camión, y mientras el chofer no contesta ningún otro camión toma ese contenedor. Si acepta (la app acepta sola a los 8 segundos), entra como parada y el recorrido por las calles se vuelve a calcular; si mantiene la ruta, espera al próximo despacho y no se le vuelve a proponer en esa ruta.
 
 **Rutas por las calles.** Se piden a OSRM (gratis, sin clave) la primera vez que alguien mira una ruta, no al crearla, y quedan guardadas en `ruta.trazado`. Así, con la simulación acelerada, no se piden cientos de rutas que nadie ve. Los pedidos salen de a uno, con un segundo entre cada uno, que es lo que pide el servidor público. Si OSRM no responde, el panel dibuja líneas rectas y se vuelve a intentar al minuto. Para la demo publicada conviene levantar un OSRM propio con el mapa de Argentina y apuntar `OSRM_URL` ahí.
 

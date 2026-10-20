@@ -229,7 +229,7 @@ public class ServicioDelChofer {
         RutaDto ruta = ultima == null ? null : RutaDto.de(ultima);
         TurnoDto.PropuestaDto propuesta = ultima == null || !ultima.getEstado().equals(Ruta.EN_CURSO) ? null
                 : propuestas.pendienteDe(ultima.getId()).map(p -> new TurnoDto.PropuestaDto(p.getId(),
-                        p.getContenedor().getId(), p.getContenedor().getDireccion(),
+                        p.getContenedor().getId(), p.getContenedor().getDireccion(), p.getContenedor().posicion(),
                         p.getContenedor().getNivelEstimado() != null ? p.getContenedor().getNivelEstimado()
                                 : p.getContenedor().getLlenado(),
                         p.getOrden(), p.getKmExtra().doubleValue(), p.getMinutosExtra(), p.getMotivo()))

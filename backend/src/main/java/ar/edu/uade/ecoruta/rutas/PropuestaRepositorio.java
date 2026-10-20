@@ -15,6 +15,10 @@ public interface PropuestaRepositorio extends JpaRepository<PropuestaDeParada, L
             """)
     Optional<PropuestaDeParada> pendienteDe(@Param("rutaId") long rutaId);
 
+    /** Los contenedores que esperan la respuesta de un chofer: ningún otro camión los toma mientras tanto. */
+    @Query("SELECT p.contenedor.id FROM PropuestaDeParada p WHERE p.estado = 'pendiente'")
+    List<String> conPropuestaPendiente();
+
     @Query("SELECT p.contenedor.id FROM PropuestaDeParada p WHERE p.ruta.id = :rutaId")
     List<String> contenedoresPropuestos(@Param("rutaId") long rutaId);
 }

@@ -43,9 +43,12 @@ public class ServicioDeDespacho {
     private final RutaRepositorio rutas;
     private final ServicioDePrioridad prioridad;
     private final SectorRepositorio sectores;
+    private final PropuestaRepositorio propuestas;
 
     ServicioDeDespacho(CamionRepositorio camiones, ContenedorRepositorio contenedores, ZonaRepositorio zonas,
-            RutaRepositorio rutas, ServicioDePrioridad prioridad, SectorRepositorio sectores) {
+            RutaRepositorio rutas, ServicioDePrioridad prioridad, SectorRepositorio sectores,
+            PropuestaRepositorio propuestas) {
+        this.propuestas = propuestas;
         this.sectores = sectores;
         this.camiones = camiones;
         this.contenedores = contenedores;
@@ -112,12 +115,15 @@ public class ServicioDeDespacho {
         return ruta;
     }
 
+    // También los que esperan que un chofer acepte sumarlos a su ruta
     private Set<String> contenedoresEnRutasActivas() {
-        return rutas.activas().stream()
+        Set<String> ocupados = rutas.activas().stream()
                 .flatMap(r -> r.getParadas().stream())
                 .filter(Parada::estaPendiente)
                 .map(p -> p.getContenedor().getId())
                 .collect(Collectors.toSet());
+        ocupados.addAll(propuestas.conPropuestaPendiente());
+        return ocupados;
     }
 
     private Set<String> camionesConRutaActiva() {

@@ -23,8 +23,8 @@ public record TurnoDto(String chofer, CamionDelChofer camion, boolean manejadoPo
      * @param kmExtra      cuánto agrega el desvío (en línea recta)
      * @param minutosExtra cuánto tiempo agrega, con la parada incluida
      */
-    public record PropuestaDto(long id, String contenedorId, String direccion, int llenado, int orden, double kmExtra,
-            int minutosExtra, String motivo) {
+    public record PropuestaDto(long id, String contenedorId, String direccion, Coordenada posicion, int llenado, int orden,
+            double kmExtra, int minutosExtra, String motivo) {
     }
 
     public record CamionDelChofer(String id, int numero, int sectorId, String sector, String estado, int cargaPct,

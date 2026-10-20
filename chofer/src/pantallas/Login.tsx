@@ -27,23 +27,24 @@ export default function Login({ alEntrar }: Props) {
         alEntrar(sesion);
       }
     } catch (e) {
-      setError(
-        e instanceof ErrorDeApi && e.estado === 401 ? 'Usuario o contraseña incorrectos.' : (e as Error).message,
-      );
+      setError(e instanceof ErrorDeApi && e.estado === 401 ? 'Usuario o contraseña incorrectos.' : (e as Error).message);
     } finally {
       setEnviando(false);
     }
   }
 
   return (
-    <main className="login">
-      <div className="marca">
-        <span className="marca__logo" aria-hidden="true" />
-        <span>EcoRuta</span>
-        <small>Chofer</small>
-      </div>
-      <form className="tarjeta formulario" onSubmit={enviar}>
-        <h1>Ingresá para ver tu ruta</h1>
+    <div className="pantalla">
+      <header className="encabezado encabezado--alto">
+        <div className="encabezado__texto">
+          <span className="marca-app">
+            <span className="marca-app__logo" aria-hidden="true" />
+            EcoRuta <small>Chofer</small>
+          </span>
+          <h1>Ingresá para ver tu ruta</h1>
+        </div>
+      </header>
+      <form className="hoja hoja--formulario" onSubmit={enviar}>
         <label>
           Usuario
           <input
@@ -73,8 +74,10 @@ export default function Login({ alEntrar }: Props) {
         <button type="submit" className="boton boton--principal" disabled={enviando}>
           {enviando ? 'Ingresando…' : 'Ingresar'}
         </button>
-        <p className="nota">Usuarios de prueba: chofer22, chofer31, chofer14, chofer17 o chofer40, contraseña chofer123.</p>
+        <p className="tenue">
+          Usuarios de prueba: chofer22, chofer31, chofer14, chofer17 o chofer40, contraseña chofer123.
+        </p>
       </form>
-    </main>
+    </div>
   );
 }

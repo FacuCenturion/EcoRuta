@@ -51,7 +51,7 @@ Decisiones tomadas:
 - [x] Detección de anomalías en el sensor
 - [x] Incidentes con confirmación del operador
 - [x] Rutas por las calles: el recorrido se pide a OSRM (gratis, sin clave), se guarda en la ruta y se dibuja en Rutas y camiones. Si OSRM no responde, se dibujan líneas rectas
-- [ ] Recalcular la ruta automáticamente cuando aparece un contenedor prioritario nuevo (Release 2)
+- [x] Sumar a la ruta en curso un contenedor que se vuelve urgente (se le propone al chofer con la app)
 - [x] Detección de sensores con falla usando solo el nivel de llenado: sin señal, valor congelado y lecturas irregulares
 - [x] Nivel estimado para los contenedores con el sensor caído o trabado (se usa para priorizar)
 - [x] Detectar el sensor que no baja después de una recolección confirmada (estado `trabado`, en el backend)
@@ -117,7 +117,7 @@ Lo que falta de la Sprint 3 (antes estaba en las Sprints 4 y 5):
 - [x] Mini sprint A, backend: turno con la app, iniciar la ruta, vaciado y "no se pudo"; el emulador deja de manejar ese camión
 - [x] Mini sprint B, pantallas: login, empezar turno, ruta nueva, parada actual con "Cómo llegar", mapa por las calles y lista de paradas
 - [x] Mini sprint C, aviso de ruta nueva con la app abierta o en segundo plano (vibra y notifica); se puede instalar en el celular
-- [ ] Ajustar las pantallas al diseño del equipo
+- [x] Ajustar las pantallas al diseño del equipo: navegación giro a giro, llegada, deshacer, parada nueva prioritaria, foto y nota en el no se pudo, resumen de la ruta
 - [ ] Notificaciones con la app cerrada (Web Push)
 - [ ] Mini sprint D: aviso al operador si el chofer no inicia la ruta a los 10 minutos
 - [ ] Probarla en celulares reales (Android e iPhone) con la señal de la calle

@@ -1,11 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { pedir } from '../api';
+import { dictar, sePuedeDictar } from '../dictado';
+import { achicarFoto } from '../foto';
 import type { Parada } from '../tipos';
+import {
+  IconoAuto,
+  IconoBolsas,
+  IconoCamara,
+  IconoCheck,
+  IconoMicrofono,
+  IconoObra,
+  IconoPuntos,
+  IconoRoto,
+  IconoSensor,
+} from './Iconos';
 
 interface Props {
-  parada: Parada;
+  parada: Parada; // la dirección ya se ve en el encabezado
   cancelar: () => void;
-  confirmar: (motivo: string) => Promise<void>;
+  confirmar: (motivo: string, nota?: string, foto?: string) => Promise<boolean>;
 }
 
 // Por si el servidor no responde: los mismos que tiene el backend
@@ -17,13 +30,27 @@ const MOTIVOS_DE_RESERVA = [
   'Sensor marca mal',
 ];
 
-// Hoja que sube desde abajo para elegir por qué no se pudo vaciar el contenedor.
-// El Centro de Monitoreo recibe un incidente con el motivo.
-export default function NoSePudo({ parada, cancelar, confirmar }: Props) {
+const ICONOS: Record<string, ReactNode> = {
+  'Auto estacionado': <IconoAuto />,
+  'Obra o calle cortada': <IconoObra />,
+  'Contenedor dañado': <IconoRoto />,
+  'Basura fuera del contenedor': <IconoBolsas />,
+  'Sensor marca mal': <IconoSensor />,
+};
+const OTRO = 'Otro motivo';
+
+// Hoja para contar por qué no se pudo vaciar el contenedor. El Centro de Monitoreo recibe un
+// incidente con el motivo, la nota y la foto.
+export default function NoSePudo({ cancelar, confirmar }: Props) {
   const [motivos, setMotivos] = useState(MOTIVOS_DE_RESERVA);
   const [elegido, setElegido] = useState<string>();
-  const [otro, setOtro] = useState('');
+  const [nota, setNota] = useState('');
+  const [foto, setFoto] = useState<string>();
+  const [escuchando, setEscuchando] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [problema, setProblema] = useState<string>();
+  const archivo = useRef<HTMLInputElement>(null);
+  const puedeDictar = sePuedeDictar();
 
   useEffect(() => {
     pedir<string[]>('/chofer/motivos')
@@ -33,58 +60,102 @@ export default function NoSePudo({ parada, cancelar, confirmar }: Props) {
       });
   }, []);
 
-  const motivo = elegido === 'otro' ? otro.trim() : elegido;
+  const motivo = elegido === OTRO ? nota.trim() : elegido;
 
   async function enviar() {
     if (!motivo) return;
     setEnviando(true);
-    await confirmar(motivo);
+    await confirmar(motivo, elegido === OTRO ? undefined : nota.trim() || undefined, foto);
     setEnviando(false);
   }
 
+  async function sacarFoto(lista: FileList | null) {
+    if (!lista?.[0]) return;
+    try {
+      setFoto(await achicarFoto(lista[0]));
+      setProblema(undefined);
+    } catch {
+      setProblema('No se pudo leer la foto. Probá de nuevo.');
+    }
+  }
+
+  function dictarNota() {
+    setEscuchando(true);
+    dictar(
+      (texto) => {
+        setEscuchando(false);
+        if (texto) setNota((anterior) => (anterior ? `${anterior} ${texto}` : texto));
+      },
+      () => {
+        setEscuchando(false);
+        setProblema('No se pudo usar el micrófono. Escribí la nota.');
+      },
+    );
+  }
+
   return (
-    <div className="fondo" role="presentation" onClick={cancelar}>
-      <section
-        className="hoja"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="titulo-no-se-pudo"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 id="titulo-no-se-pudo">¿Por qué no se pudo?</h2>
-        <p className="nota">{parada.direccion}</p>
-        <div className="opciones" role="radiogroup">
-          {[...motivos, 'otro'].map((m) => (
-            <button
-              key={m}
-              type="button"
-              role="radio"
-              aria-checked={elegido === m}
-              className={elegido === m ? 'opcion opcion--elegida' : 'opcion'}
-              onClick={() => setElegido(m)}
-            >
-              {m === 'otro' ? 'Otro motivo' : m}
-            </button>
-          ))}
-        </div>
-        {elegido === 'otro' && (
-          <textarea
-            rows={2}
-            placeholder="Contá qué pasó"
-            value={otro}
-            onChange={(e) => setOtro(e.target.value)}
-            aria-label="Otro motivo"
-          />
+    <section className="hoja" role="dialog" aria-modal="true" aria-labelledby="titulo-no-se-pudo">
+      <span className="hoja__manija" aria-hidden="true" />
+      <h2 id="titulo-no-se-pudo">¿Por qué no se pudo recolectar?</h2>
+      <p className="tenue">Elegí un motivo. La parada queda pendiente para el operador.</p>
+      <div className="motivos" role="radiogroup" aria-label="Motivo">
+        {[...motivos, OTRO].map((m) => (
+          <button
+            key={m}
+            type="button"
+            role="radio"
+            aria-checked={elegido === m}
+            className={elegido === m ? 'motivo motivo--elegido' : 'motivo'}
+            onClick={() => setElegido(m)}
+          >
+            {ICONOS[m] ?? <IconoPuntos />}
+            <span>{m}</span>
+          </button>
+        ))}
+      </div>
+      {(elegido === OTRO || nota) && (
+        <textarea
+          rows={2}
+          placeholder={elegido === OTRO ? 'Contá qué pasó' : 'Nota para el operador'}
+          value={nota}
+          onChange={(e) => setNota(e.target.value)}
+          aria-label="Nota"
+        />
+      )}
+      <div className="extras">
+        <input
+          ref={archivo}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={(e) => sacarFoto(e.target.files)}
+        />
+        <button type="button" className="boton boton--borde boton--medio" onClick={() => archivo.current?.click()}>
+          {foto ? <IconoCheck /> : <IconoCamara />} {foto ? 'Foto lista' : 'Sacar foto'}
+        </button>
+        {puedeDictar ? (
+          <button type="button" className="boton boton--borde boton--medio" disabled={escuchando} onClick={dictarNota}>
+            <IconoMicrofono /> {escuchando ? 'Escuchando…' : 'Dictar nota'}
+          </button>
+        ) : (
+          <button type="button" className="boton boton--borde boton--medio" onClick={() => setNota(nota || ' ')}>
+            <IconoMicrofono /> Escribir nota
+          </button>
         )}
-        <div className="acciones">
-          <button type="button" className="boton boton--secundario" onClick={cancelar}>
-            Volver
-          </button>
-          <button type="button" className="boton boton--alerta" disabled={!motivo || enviando} onClick={enviar}>
-            {enviando ? 'Enviando…' : 'Confirmar'}
-          </button>
-        </div>
-      </section>
-    </div>
+      </div>
+      {foto && <img className="miniatura" src={foto} alt="Foto que se va a mandar" />}
+      {problema && (
+        <p className="error" role="alert">
+          {problema}
+        </p>
+      )}
+      <button type="button" className="boton boton--principal" disabled={!motivo || enviando} onClick={enviar}>
+        {enviando ? 'Enviando…' : 'Enviar y seguir ruta'}
+      </button>
+      <button type="button" className="boton boton--texto" onClick={cancelar}>
+        Volver
+      </button>
+    </section>
   );
 }

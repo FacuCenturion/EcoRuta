@@ -20,6 +20,10 @@ export interface Parada {
   eta: string | null;
   horaReal: string | null;
   motivo: string | null; // por qué no se pudo
+  llenado: number;
+  tipo: string; // lateral, bilateral o soterrado
+  barrio: string;
+  ultimaRecoleccion: string | null;
 }
 
 export interface Ruta {
@@ -27,9 +31,22 @@ export interface Ruta {
   estado: EstadoRuta;
   creada: string;
   salidaProgramada: string | null;
+  salidaReal: string | null;
   kmPlanificados: number;
   duracionEstimadaMin: number;
   paradas: Parada[];
+}
+
+export interface Propuesta {
+  id: number;
+  contenedorId: string;
+  direccion: string;
+  posicion: Coordenada;
+  llenado: number;
+  orden: number;
+  kmExtra: number;
+  minutosExtra: number;
+  motivo: string;
 }
 
 export interface Turno {
@@ -47,7 +64,19 @@ export interface Turno {
   manejadoPorApp: boolean;
   base: Coordenada;
   ruta: Ruta | null;
+  propuesta: Propuesta | null;
   reloj: string;
+}
+
+// Una maniobra de OSRM: dónde doblar y por qué calle se sigue
+export interface Indicacion {
+  tipo: string; // depart, turn, new name, continue, roundabout, arrive...
+  modificador: string | null; // left, right, slight left, sharp right, straight, uturn
+  calle: string;
+  salida: number | null;
+  lat: number;
+  lng: number;
+  metros: number;
 }
 
 export interface Trazado {
@@ -55,6 +84,7 @@ export interface Trazado {
   estado: 'listo' | 'calculando' | 'sin_servicio' | 'fallo';
   kmPorCalle: number | null;
   tramos: Coordenada[][];
+  indicaciones: Indicacion[][];
 }
 
 export interface UsuarioSesion {

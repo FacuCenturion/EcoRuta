@@ -63,6 +63,19 @@ export async function pedir<T>(ruta: string, opciones: { metodo?: string; cuerpo
   return respuesta.status === 204 ? (undefined as T) : ((await respuesta.json()) as T);
 }
 
+// Trae una imagen protegida (por ejemplo la foto de un incidente) y la abre en otra pestaña.
+// Un <img> o un enlace no pueden mandar el token en el header, por eso se pide con fetch.
+export async function abrirImagen(ruta: string) {
+  const ventana = window.open('', '_blank');
+  const respuesta = await fetch(URL_API + ruta, { headers: encabezados() });
+  if (!respuesta.ok) {
+    ventana?.close();
+    throw new ErrorDeApi(respuesta.status, 'SIN_IMAGEN', 'No se pudo abrir la foto.');
+  }
+  const url = URL.createObjectURL(await respuesta.blob());
+  if (ventana) ventana.location.href = url;
+}
+
 // Separa los eventos completos que llegaron por SSE y devuelve lo que sobra para la próxima vez.
 // Un evento termina con una línea vacía; las líneas que empiezan con ":" son comentarios (latidos).
 export function separarEventos(texto: string): { eventos: string[]; resto: string } {

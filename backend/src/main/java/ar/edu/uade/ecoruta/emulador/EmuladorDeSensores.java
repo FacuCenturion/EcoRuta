@@ -305,8 +305,10 @@ public class EmuladorDeSensores {
         }
 
         // 4) El sistema decide si manda camiones, y los choferes avanzan en sus rutas
+        // Lo urgente se le propone primero a un camión que ya está en ruta cerca; recién después se
+        // despacha otro camión con lo que quede
+        paradasNuevas.proponer(ahora);
         despacho.despacharAutomatico(ahora);
-        paradasNuevas.proponer(ahora); // a los choferes con la app, si algo se volvió urgente
         List<LecturaNueva> trasRecoleccion = new ArrayList<>();
         Map<String, Ruta> rutaPorCamion = new HashMap<>();
         rutas.activas().forEach(r -> rutaPorCamion.put(r.getCamion().getId(), r));
