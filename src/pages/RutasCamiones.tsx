@@ -1,12 +1,13 @@
-import { useState } from 'react';
-import { vistaDeContenedores } from '../api/adaptadores';
+import { useEffect, useState } from 'react';
+import { vistaDeContenedores, type TrazadoApi } from '../api/adaptadores';
 import Encabezado from '../components/Encabezado';
 import MapaContenedores from '../components/MapaContenedores';
 import { useSimulacion } from '../context/SimulacionContext';
 import { buscarZona } from '../data/zonas';
 import { avanceDeRuta } from '../logic/indicadores';
+import { ETIQUETA_MOTIVO_VISITA } from '../logic/prioridad';
 import type { Camion, Coordenada, EstadoCamion } from '../types';
-import { formatearHora } from '../utils/formato';
+import { formatearDecimal, formatearHora } from '../utils/formato';
 
 const ETIQUETA_CAMION: Record<EstadoCamion, string> = {
   en_ruta: 'En ruta',
@@ -99,8 +100,10 @@ export default function RutasCamiones() {
 }
 
 function DetalleCamion({ camion }: { camion: Camion }) {
-  const { estado, nombreArea, fuente } = useSimulacion();
+  const { estado, nombreArea, fuente, pedirTrazado, despachar } = useSimulacion();
   const zona = buscarZona(camion.zonaId);
+  const trazado = useTrazado(camion.rutaId, pedirTrazado, estado.relojMs);
+  const [despacho, setDespacho] = useState<{ enviando: boolean; error?: string | null }>({ enviando: false });
   const avance = avanceDeRuta(camion);
   const contenedores = estado.contenedores.filter((c) => camion.paradas.some((p) => p.contenedorId === c.id));
   const proxima = camion.paradas.find((p) => p.estado === 'pendiente');
@@ -112,8 +115,24 @@ function DetalleCamion({ camion }: { camion: Camion }) {
   };
   const hechas = camion.paradas.filter((p) => p.estado === 'recolectada').map((p) => posicionDe(p.contenedorId));
   const pendientes = camion.paradas.filter((p) => p.estado === 'pendiente').map((p) => posicionDe(p.contenedorId));
-  const recorridoHecho = [zona.base, ...hechas];
-  const recorridoPendiente = pendientes.length > 0 ? [camion.posicion, ...pendientes, zona.base] : [];
+  let recorridoHecho = [zona.base, ...hechas];
+  let recorridoPendiente = pendientes.length > 0 ? [camion.posicion, ...pendientes, zona.base] : [];
+
+  // Con el recorrido por las calles: hay un tramo por cada tramo de la ruta (base, paradas, base).
+  // Los tramos hasta la última parada cerrada ya se hicieron; el resto queda pendiente.
+  if (trazado?.estado === 'listo' && trazado.tramos.length === camion.paradas.length + 1) {
+    const cerradas = camion.paradas.filter((p) => p.estado !== 'pendiente').length;
+    const corte = pendientes.length > 0 ? cerradas : trazado.tramos.length;
+    recorridoHecho = trazado.tramos.slice(0, corte).flat();
+    recorridoPendiente = trazado.tramos.slice(corte).flat();
+  }
+  const puedeSalir = camion.estado === 'en_base' && pendientes.length === 0;
+
+  async function despacharAhora() {
+    if (!despachar) return;
+    setDespacho({ enviando: true });
+    setDespacho({ enviando: false, error: await despachar(camion.areaId) });
+  }
 
   return (
     <div className="detalle-camion">
@@ -154,6 +173,7 @@ function DetalleCamion({ camion }: { camion: Camion }) {
           <div className="barra-filtros">
             <span className="etiqueta">Recorrido</span>
             <span className="etiqueta etiqueta--azul">Pendiente</span>
+            {fuente === 'api' && <span className="nota">{textoDelTrazado(trazado, camion.kmPlanificados)}</span>}
           </div>
           <MapaContenedores
             className="mapa mapa--medio"
@@ -195,6 +215,14 @@ function DetalleCamion({ camion }: { camion: Camion }) {
                     <span className="parada__texto">
                       {contenedor?.direccion ?? parada.direccion}
                       {esProxima && <span className="etiqueta etiqueta--azul">Próxima</span>}
+                      {parada.motivoVisita === 'de_paso' && (
+                        <span className="etiqueta parada__de-paso" title={ETIQUETA_MOTIVO_VISITA.de_paso}>
+                          De paso
+                        </span>
+                      )}
+                      {parada.motivoVisita && parada.motivoVisita !== 'de_paso' && (
+                        <span className="parada__por-que">{ETIQUETA_MOTIVO_VISITA[parada.motivoVisita]}</span>
+                      )}
                       {parada.estado === 'no_se_pudo' && <span className="parada__motivo">{parada.motivo}</span>}
                     </span>
                     <span className="parada__hora">
@@ -208,15 +236,80 @@ function DetalleCamion({ camion }: { camion: Camion }) {
             </ol>
           )}
           <div className="acciones-ruta">
-            <button type="button" className="boton boton--primario" disabled title="Disponible en el próximo release">
+            {despachar && (
+              <button
+                type="button"
+                className="boton boton--primario"
+                disabled={!puedeSalir || despacho.enviando}
+                title={
+                  puedeSalir
+                    ? 'Arma una ruta con los contenedores que hoy hacen falta'
+                    : 'El camión tiene que estar en la base'
+                }
+                onClick={despacharAhora}
+              >
+                {despacho.enviando ? 'Despachando…' : 'Despachar ahora'}
+              </button>
+            )}
+            <button
+              type="button"
+              className={despachar ? 'boton' : 'boton boton--primario'}
+              disabled
+              title="Disponible en el próximo release"
+            >
               Reasignar paradas
             </button>
             <button type="button" className="boton" disabled title="Disponible en el próximo release">
               Contactar chofer
             </button>
           </div>
+          {despacho.error && (
+            <p className="login__error" role="alert">
+              {despacho.error}
+            </p>
+          )}
+          {despacho.error === null && (
+            <p className="nota" role="status">
+              Ruta despachada. El camión sale ahora.
+            </p>
+          )}
         </section>
       </div>
     </div>
   );
+}
+
+// Pide el recorrido por las calles de la ruta. Mientras el backend lo calcula se dibujan líneas
+// rectas, y se vuelve a preguntar con cada aviso de datos nuevos hasta que está listo.
+function useTrazado(
+  rutaId: number | undefined,
+  pedirTrazado: ((rutaId: number) => Promise<TrazadoApi>) | undefined,
+  relojMs: number,
+): TrazadoApi | undefined {
+  const [trazado, setTrazado] = useState<TrazadoApi>();
+  const actual = trazado && trazado.rutaId === rutaId ? trazado : undefined;
+  const yaEsta = actual?.estado === 'listo' || actual?.estado === 'sin_servicio';
+
+  useEffect(() => {
+    if (!pedirTrazado || rutaId === undefined || yaEsta) return;
+    let vigente = true;
+    pedirTrazado(rutaId)
+      .then((nuevo) => vigente && setTrazado(nuevo))
+      .catch(() => {
+        // sin recorrido se dibujan líneas rectas
+      });
+    return () => {
+      vigente = false;
+    };
+  }, [pedirTrazado, rutaId, yaEsta, relojMs]);
+
+  return actual;
+}
+
+function textoDelTrazado(trazado: TrazadoApi | undefined, kmEnLineaRecta: number): string {
+  if (!trazado || trazado.estado === 'calculando') return 'Calculando el recorrido por las calles…';
+  if (trazado.estado === 'listo' && trazado.kmPorCalle !== null) {
+    return `Por las calles: ${formatearDecimal(trazado.kmPorCalle)} km (en línea recta, ${formatearDecimal(kmEnLineaRecta)} km)`;
+  }
+  return 'Recorrido en línea recta entre paradas: no se pudo calcular por las calles';
 }

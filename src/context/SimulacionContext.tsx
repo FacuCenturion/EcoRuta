@@ -12,6 +12,7 @@ import {
   type ResumenApi,
   type SectorApi,
   type SimulacionApi,
+  type TrazadoApi,
 } from '../api/adaptadores';
 import { escucharAvisos, pedir, USA_API } from '../api/cliente';
 import type { Vista } from '../components/mapa/tipos';
@@ -62,6 +63,8 @@ interface ValorContexto {
   contornosPara: (filtro: FiltroZona) => Zona[];
   estadisticas: Estadisticas;
   pedirCurva?: (contenedorId: string) => Promise<Curva>; // solo con backend; si no, la curva sale del contenedor
+  pedirTrazado?: (rutaId: number) => Promise<TrazadoApi>; // recorrido por las calles, solo con backend
+  despachar?: (areaId: number) => Promise<string | null>; // despacho manual; devuelve el error, si hubo
   aviso?: string; // un error que el operador tiene que ver
 }
 
@@ -284,9 +287,19 @@ function ProveedorConectado({ children }: { children: ReactNode }) {
           estimadas: curva.estimadas.map((l) => ({ ms: aMs(l.medidoAt), nivel: l.llenado })),
         };
       },
+      pedirTrazado: (rutaId) => pedir<TrazadoApi>(`/rutas/${rutaId}/trazado`),
+      despachar: async (sectorId) => {
+        try {
+          await pedir('/rutas/planificar', { metodo: 'POST', cuerpo: { sectorId } });
+          actualizar();
+          return null;
+        } catch (error) {
+          return (error as Error).message;
+        }
+      },
       aviso: aviso ?? (conectado ? undefined : 'Se cortó la conexión con el servidor. Reintentando…'),
     };
-  }, [datos, zonaFiltro, accion, aviso, conectado]);
+  }, [datos, zonaFiltro, accion, aviso, conectado, actualizar]);
 
   if (!valor) {
     return (

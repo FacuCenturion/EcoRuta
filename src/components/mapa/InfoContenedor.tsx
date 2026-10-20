@@ -1,6 +1,6 @@
 import { useSimulacion } from '../../context/SimulacionContext';
 import { ETIQUETA_ESTADO_SENSOR } from '../../logic/estadoSensor';
-import { etiquetaMotivo, lecturaConfiable, type MotivoPrioridad } from '../../logic/prioridad';
+import { etiquetaMotivo, lecturaConfiable, textoDeDesborde, type MotivoPrioridad } from '../../logic/prioridad';
 import type { Contenedor, NivelLlenado } from '../../types';
 import { ETIQUETA_NIVEL } from '../../utils/colores';
 import { formatearHora } from '../../utils/formato';
@@ -13,7 +13,8 @@ interface Props {
 
 // Contenido del globo que se abre al tocar un contenedor en el mapa
 export default function InfoContenedor({ contenedor, nivel, motivo }: Props) {
-  const { nombreArea } = useSimulacion();
+  const { nombreArea, estado } = useSimulacion();
+  const desborde = textoDeDesborde(contenedor, estado.relojMs);
   return (
     <div className="info-mapa">
       <strong>{contenedor.direccion}</strong>
@@ -31,6 +32,12 @@ export default function InfoContenedor({ contenedor, nivel, motivo }: Props) {
         <>
           <br />
           Prioridad: {etiquetaMotivo(motivo)}
+        </>
+      )}
+      {desborde && (
+        <>
+          <br />
+          {desborde}
         </>
       )}
       {contenedor.estadoSensor !== 'funcionando' && (

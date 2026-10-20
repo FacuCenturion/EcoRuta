@@ -36,3 +36,13 @@ export function formatearHaceCuanto(ms: number, ahoraMs: number): string {
   const dias = Math.floor(horas / 24);
   return dias === 1 ? 'hace 1 día' : `hace ${dias} días`;
 }
+
+// Un momento cercano, en palabras: "a las 18:40", "mañana a las 7:15"
+export function formatearCuando(ms: number, ahoraMs: number): string {
+  const dia = (valor: number) => new Date(valor).toDateString();
+  const manana = new Date(ahoraMs);
+  manana.setDate(manana.getDate() + 1);
+  if (dia(ms) === dia(ahoraMs)) return `a las ${formatearHora(ms)}`;
+  if (dia(ms) === manana.toDateString()) return `mañana a las ${formatearHora(ms)}`;
+  return `el ${formatearFechaCorta(ms)} a las ${formatearHora(ms)}`;
+}

@@ -57,6 +57,8 @@ export interface Contenedor {
   // Lo que ya calculó el backend; con datos simulados en el navegador se calcula acá
   motivo?: 'llenado' | 'riesgo' | 'reporte' | 'tiempo' | null;
   nivel?: NivelLlenado;
+  desbordeEstimadoMs?: number; // pronóstico del backend, si es en las próximas 48 h
+  desbordeDesdeMs?: number; // desde cuándo está lleno, si lo está
 }
 
 export type EstadoCamion = 'en_ruta' | 'en_descarga' | 'en_base' | 'demorado';
@@ -78,6 +80,7 @@ export interface Camion {
   numero: number;
   zonaId: number;
   areaId: number;
+  rutaId?: number; // la ruta más nueva, con backend
   chofer: string;
   estado: EstadoCamion;
   paradas: Parada[];

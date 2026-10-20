@@ -1687,3 +1687,14 @@ textarea {
   background: #3b2a12;
   color: var(--ambar-claro);
 }
+
+/* Por qué pasa el camión por cada parada (con backend) */
+.parada__de-paso {
+  margin-left: 8px;
+}
+
+.parada__por-que {
+  display: block;
+  color: var(--texto-suave);
+  font-size: 12px;
+}

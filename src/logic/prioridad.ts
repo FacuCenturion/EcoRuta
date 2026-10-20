@@ -1,5 +1,6 @@
 import { UMBRAL_BAJO, UMBRAL_DESBORDE, UMBRAL_PRIORITARIO, UMBRAL_RIESGO_PROYECTADO } from '../config';
 import type { Contenedor, NivelLlenado } from '../types';
+import { formatearCuando, formatearHaceCuanto } from '../utils/formato';
 import { horasHastaProximaRonda, proyectarNivel } from './llenado';
 
 // "tiempo" (más de 48 h sin recolectar) solo lo calcula el backend
@@ -62,3 +63,20 @@ export function nivelVisual(contenedor: Contenedor, hora: number, dia: number): 
   if (motivoDelContenedor(contenedor, hora, dia) !== null) return 'prioritario';
   return clasificarNivel(lectura) === 'bajo' ? 'bajo' : 'medio';
 }
+
+// El pronóstico de desborde del backend, en palabras. Sin backend no hay pronóstico.
+export function textoDeDesborde(contenedor: Contenedor, relojMs: number): string | null {
+  if (contenedor.desbordeDesdeMs) return `Desbordado ${formatearHaceCuanto(contenedor.desbordeDesdeMs, relojMs)}`;
+  if (contenedor.desbordeEstimadoMs && contenedor.desbordeEstimadoMs > relojMs) {
+    return `Desborda ${formatearCuando(contenedor.desbordeEstimadoMs, relojMs)} (estimado)`;
+  }
+  return null;
+}
+
+export const ETIQUETA_MOTIVO_VISITA: Record<string, string> = {
+  llenado: 'Superó el 80%',
+  riesgo: 'Riesgo de desborde',
+  reporte: 'Reporte vecinal',
+  tiempo: 'Más de 48 h sin recolectar',
+  de_paso: 'De paso: está cerca y pasa del 50%',
+};

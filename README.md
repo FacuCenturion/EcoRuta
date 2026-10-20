@@ -48,6 +48,8 @@ Así como está, el panel simula los datos en el navegador. Para usar el backend
 
 Con backend, el panel muestra solo la zona 1 dividida en 4 sectores, con los 180 contenedores reales, y el filtro del encabezado pasa a ser por sector. Los datos se actualizan cuando el backend avisa que hubo cambios (Server-Sent Events), sin preguntar cada tantos segundos. Pausar y acelerar desde el encabezado controla la simulación del backend, que es compartida: si dos personas tienen el panel abierto, ven lo mismo.
 
+Lo que solo aparece con backend: las rutas dibujadas por las calles (OSRM), la hora estimada de desborde de cada contenedor, las paradas "de paso" y el botón "Despachar ahora" en Rutas y camiones.
+
 ### Usuarios de prueba
 
 La página pide iniciar sesión. Hay dos usuarios de ejemplo:
@@ -121,7 +123,7 @@ scripts/        generar_limites_zonas.py, arma limites-zonas.json a partir de lo
 ## Limitaciones conocidas
 
 - Sin backend, las posiciones de los contenedores, las bases y las calles son de ejemplo, y al recargar la página la simulación vuelve a empezar. Con backend, los contenedores son los reales de la zona 1.
-- Las distancias se calculan en línea recta y las rutas se dibujan con líneas rectas entre paradas; en la calle serían algo más largas.
+- Las distancias se calculan en línea recta. Sin backend, las rutas también se dibujan rectas entre paradas; con backend se dibujan por las calles.
 - Sin backend, el login es de prueba (ver arriba): las contraseñas están en el código.
 - No está la app del chofer (etapa posterior) ni la conexión real con Boti. En el simulador los camiones recolectan solos para que el panel tenga movimiento.
 - En "Rutas y camiones" los botones "Reasignar paradas" y "Contactar chofer" están deshabilitados: son del Release 2.

@@ -42,7 +42,7 @@ const contenedor = (id: string, sectorId: number, llenado: number, extra: object
 const RESPUESTAS: Record<string, unknown> = {
   '/simulacion': { reloj: RELOJ, activa: true, enPausa: false, velocidad: 1 },
   '/contenedores?zonaId=1': [
-    contenedor('SNI-01', 1, 85),
+    contenedor('SNI-01', 1, 85, { desbordeEstimado: '2026-10-19T19:00:00-03:00' }),
     contenedor('MON-02', 2, 60, { estadoSensor: 'trabado', nivelEstimado: 74, motivo: 'tiempo' }),
   ],
   '/camiones?zonaId=1': [
@@ -71,9 +71,54 @@ const RESPUESTAS: Record<string, unknown> = {
           horaReal: null,
           motivo: null,
         },
+        {
+          id: 2,
+          contenedorId: 'MON-02',
+          direccion: 'Calle MON-02',
+          orden: 2,
+          estado: 'pendiente',
+          motivoVisita: 'de_paso',
+          eta: '2026-10-19T17:55:00-03:00',
+          horaReal: null,
+          motivo: null,
+        },
       ],
     },
+    {
+      id: 'C40',
+      numero: 40,
+      zonaId: 1,
+      sectorId: 1,
+      chofer: 'Marcos Villalba',
+      estado: 'en_base',
+      cargaPct: 0,
+      posicion: { lat: -34.609, lng: -58.37 },
+      kmRecorridosHoy: 0,
+      rutaId: null,
+      estadoRuta: null,
+      kmPlanificados: 0,
+      paradas: [],
+    },
   ],
+  '/rutas/3/trazado': {
+    rutaId: 3,
+    estado: 'listo',
+    kmPorCalle: 10.91,
+    tramos: [
+      [
+        { lat: -34.609, lng: -58.37 },
+        { lat: -34.61, lng: -58.38 },
+      ],
+      [
+        { lat: -34.61, lng: -58.38 },
+        { lat: -34.62, lng: -58.38 },
+      ],
+      [
+        { lat: -34.62, lng: -58.38 },
+        { lat: -34.609, lng: -58.37 },
+      ],
+    ],
+  },
   '/incidentes?zonaId=1': [
     {
       id: 7,
@@ -241,6 +286,37 @@ describe('panel conectado al backend', () => {
     expect(pedidos.some((p) => p.url === '/indicadores?dias=30')).toBe(true);
     expect(div.textContent).toContain('con ruta fija eran 96%');
     expect(div.textContent).toContain('Índice de eficiencia por sector');
+  });
+
+  it('la ruta se dibuja por las calles y marca las paradas de paso', async () => {
+    const div = await mostrar('/rutas');
+    await act(() => new Promise((listo) => setTimeout(listo, 20)));
+    expect(pedidos.some((p) => p.url === '/rutas/3/trazado')).toBe(true);
+    expect(div.textContent).toContain('Por las calles: 10,9 km');
+    expect(div.textContent).toContain('De paso');
+    expect(div.textContent).toContain('Superó el 80%');
+    // El camión 22 está en ruta: no se puede volver a despachar
+    const boton = [...div.querySelectorAll('button')].find((b) => b.textContent === 'Despachar ahora');
+    expect(boton?.disabled).toBe(true);
+  });
+
+  it('despachar un camión en la base se lo pide al backend', async () => {
+    const div = await mostrar('/rutas');
+    const camion40 = [...div.querySelectorAll('button')].find((b) => b.textContent?.includes('Camión 40'));
+    await act(async () => camion40!.click());
+    const despachar = [...div.querySelectorAll('button')].find((b) => b.textContent === 'Despachar ahora');
+    expect(despachar?.disabled).toBe(false);
+    await act(async () => despachar!.click());
+    await act(() => new Promise((listo) => setTimeout(listo, 10)));
+    const pedido = pedidos.find((p) => p.metodo === 'POST');
+    expect(pedido?.url).toBe('/rutas/planificar');
+    expect(JSON.parse(pedido!.cuerpo!)).toEqual({ sectorId: 1 });
+    expect(div.textContent).toContain('Ruta despachada');
+  });
+
+  it('el mapa en vivo muestra el pronóstico de desborde', async () => {
+    const div = await mostrar('/mapa');
+    expect(div.textContent).toMatch(/Desborda a las .+ \(estimado\)/);
   });
 
   it('las demás pantallas cargan', async () => {

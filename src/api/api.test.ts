@@ -7,6 +7,7 @@ import {
   type CamionApi,
   type ContenedorApi,
 } from './adaptadores';
+import { textoDeDesborde } from '../logic/prioridad';
 import { separarEventos } from './cliente';
 
 const contenedorApi: ContenedorApi = {
@@ -56,6 +57,7 @@ describe('adaptadores de la API', () => {
       sectorId: 1,
       chofer: null,
       estado: 'en_ruta',
+      rutaId: 3,
       cargaPct: 20,
       posicion: { lat: -34.6, lng: -58.37 },
       kmRecorridosHoy: 3.2,
@@ -91,6 +93,7 @@ describe('adaptadores de la API', () => {
     expect(c.paradas[1].horaRealMs).toBeUndefined();
     expect(c.chofer).toBe('Sin chofer asignado');
     expect(c.areaId).toBe(1);
+    expect(c.rutaId).toBe(3);
   });
 
   it('el id del incidente pasa a texto y uno sin contenedor no rompe la pantalla', () => {
@@ -112,6 +115,19 @@ describe('adaptadores de la API', () => {
     expect(i.areaId).toBe(3);
     expect(i.direccion).toBe('Sin contenedor asociado');
     expect(i.origen).toBeUndefined();
+  });
+
+  it('el pronóstico de desborde se cuenta en palabras', () => {
+    const reloj = Date.parse('2026-10-19T17:05:00-03:00');
+    const c = aContenedor(contenedorApi);
+    expect(c.desbordeEstimadoMs).toBe(Date.parse('2026-10-19T19:00:00-03:00'));
+    expect(textoDeDesborde(c, reloj)).toMatch(/^Desborda a las .+ \(estimado\)$/);
+    expect(textoDeDesborde({ ...c, desbordeEstimadoMs: reloj + 30 * 3600_000 }, reloj)).toMatch(
+      /^Desborda mañana a las/,
+    );
+    const lleno = aContenedor({ ...contenedorApi, desbordeDesde: '2026-10-19T15:05:00-03:00' });
+    expect(textoDeDesborde(lleno, reloj)).toBe('Desbordado hace 2 h');
+    expect(textoDeDesborde(aContenedor({ ...contenedorApi, desbordeEstimado: null }), reloj)).toBeNull();
   });
 
   it('el mapa se encuadra en el centro de los contenedores', () => {

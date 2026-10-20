@@ -58,6 +58,7 @@ export interface CamionApi {
   sectorId: number;
   chofer: string | null;
   estado: EstadoCamion;
+  rutaId: number | null;
   cargaPct: number;
   posicion: Coordenada;
   kmRecorridosHoy: number;
@@ -109,6 +110,14 @@ export interface CurvaApi {
   estimadas: { medidoAt: string; llenado: number }[];
 }
 
+// listo, calculando, sin_servicio (no hay OSRM configurado) o fallo (se reintenta más tarde)
+export interface TrazadoApi {
+  rutaId: number;
+  estado: 'listo' | 'calculando' | 'sin_servicio' | 'fallo';
+  kmPorCalle: number | null;
+  tramos: Coordenada[][];
+}
+
 export interface IndicadoresApi {
   dias: { fecha: string; kmFija: number; kmDinamica: number }[];
   semanas: { etiqueta: string; desbordesFija: number; desbordesDinamica: number }[];
@@ -149,6 +158,8 @@ export function aContenedor(c: ContenedorApi): Contenedor {
     ultimaRecoleccionMs: aMs(c.ultimaRecoleccion),
     motivo: c.motivo,
     nivel: c.nivel,
+    desbordeEstimadoMs: c.desbordeEstimado ? aMs(c.desbordeEstimado) : undefined,
+    desbordeDesdeMs: c.desbordeDesde ? aMs(c.desbordeDesde) : undefined,
   };
 }
 
@@ -170,6 +181,7 @@ export function aCamion(c: CamionApi): Camion {
     numero: c.numero,
     zonaId: c.zonaId,
     areaId: c.sectorId,
+    rutaId: c.rutaId ?? undefined,
     chofer: c.chofer ?? 'Sin chofer asignado',
     estado: c.estado,
     paradas: [...c.paradas].sort((a, b) => a.orden - b.orden).map(aParada),

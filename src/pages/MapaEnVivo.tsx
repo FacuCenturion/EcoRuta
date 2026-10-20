@@ -4,7 +4,7 @@ import MapaContenedores, { type Vista } from '../components/MapaContenedores';
 import { useSimulacion } from '../context/SimulacionContext';
 import { contenedoresPrioritarios } from '../logic/indicadores';
 import { diaDeSemana } from '../logic/llenado';
-import { etiquetaMotivo, lecturaConfiable, nivelVisual } from '../logic/prioridad';
+import { etiquetaMotivo, lecturaConfiable, nivelVisual, textoDeDesborde } from '../logic/prioridad';
 import Leyenda from '../components/Leyenda';
 import { COLOR_NIVEL } from '../utils/colores';
 
@@ -99,6 +99,9 @@ export default function MapaEnVivo() {
                         {nombreArea(contenedor.areaId)} · {etiquetaMotivo(motivo)}
                         {contenedor.nivelEstimado !== undefined && ' · nivel estimado'}
                       </small>
+                      {textoDeDesborde(contenedor, estado.relojMs) && (
+                        <small>{textoDeDesborde(contenedor, estado.relojMs)}</small>
+                      )}
                     </span>
                     <span className="fila-boton__valor">{Math.round(lecturaConfiable(contenedor))}%</span>
                   </button>

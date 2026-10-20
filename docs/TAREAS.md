@@ -13,7 +13,7 @@ El backend del panel está completo y el panel ya puede funcionar con él. Sin l
 | Solo la zona 1: 180 contenedores reales de la planilla del GCBA, en 4 sectores con 5 camiones | Hecho, en `main` |
 | Simulación de sensores con todos los casos (fallas, trabado, eventos, reportes) | Hecho, en `main` |
 | Panel conectado al backend, con avisos en vivo (SSE) en lugar de preguntar cada tantos segundos | Hecho, rama `feature/conectar-panel` |
-| Rutas que siguen las calles (OSRM, sin Google) | Sin empezar |
+| Rutas que siguen las calles (OSRM, sin Google) | Hecho, rama `feature/conectar-panel` |
 | App del chofer (web que se instala en el celular) | Sin empezar, se divide en mini sprints |
 | Demo publicada y cierre | Sin empezar |
 
@@ -22,7 +22,7 @@ Decisiones tomadas:
 - La Sprint 3 es la última: lo que estaba en las Sprints 4 y 5 se hace ahora.
 - Sin clave de Google por ahora (para evitar gastos inesperados): mapa alternativo y rutas con OSRM.
 - Sin Firebase: el backend avisa por Server-Sent Events, al panel y después a la app del chofer.
-- Falta decidir con el equipo contra qué ruta fija se comparan los indicadores (ver `backend/README.md`, Indicadores).
+- Los indicadores se comparan contra la ruta fija de 3 rondas por día (8, 14 y 20): es lo más parecido a cómo se trabaja hoy. La ronda nocturna acumula demasiado y no es real.
 
 ## Fase 1: Base del proyecto
 
@@ -50,7 +50,7 @@ Decisiones tomadas:
 - [x] Rutas por zona con el vecino más cercano
 - [x] Detección de anomalías en el sensor
 - [x] Incidentes con confirmación del operador
-- [ ] Rutas por las calles: hoy se dibujan como líneas rectas entre paradas y cruzan por el medio de las casas. Pedir el recorrido a OSRM (gratis, sin clave), guardarlo en la ruta y dibujarlo en el panel
+- [x] Rutas por las calles: el recorrido se pide a OSRM (gratis, sin clave), se guarda en la ruta y se dibuja en Rutas y camiones. Si OSRM no responde, se dibujan líneas rectas
 - [ ] Recalcular la ruta automáticamente cuando aparece un contenedor prioritario nuevo (Release 2)
 - [x] Detección de sensores con falla usando solo el nivel de llenado: sin señal, valor congelado y lecturas irregulares
 - [x] Nivel estimado para los contenedores con el sensor caído o trabado (se usa para priorizar)
@@ -93,7 +93,8 @@ Sprint 3, un bloque por integrante:
 - [x] Pronóstico de desborde con el patrón de llenado aprendido de cada contenedor (promedio por hora y día de la semana)
 - [x] Garantía de servicio: tiempo máximo de 48 horas sin recolectar y paradas de paso
 - [x] En el front: mostrar el motivo `tiempo` y los estados nuevos (sensor trabado, falla de sensor, desborde)
-- [ ] En el front: mostrar la hora estimada de desborde y marcar las paradas de paso
+- [x] En el front: mostrar la hora estimada de desborde y marcar las paradas de paso
+- [x] Despacho manual desde Rutas y camiones (botón "Despachar ahora")
 - [x] En el front: adaptar las respuestas de la API a los tipos del panel (`src/api/adaptadores.ts`). `src/logic/` se queda para el modo sin backend; con backend se usa lo que ya calculó el servidor
 - [x] Bloque 4, incidentes y emulador (backend): confirmar y descartar incidentes, reportes vecinales, cierre automático; emulador de sensores y choferes dentro del backend
 - [x] Bloque 4 (front): conectar `SimulacionContext` con la API, para que el panel deje de simular
@@ -102,13 +103,13 @@ Sprint 3, un bloque por integrante:
 
 Lo que falta de la Sprint 3 (antes estaba en las Sprints 4 y 5):
 
-- [ ] Rutas por las calles con OSRM, guardadas en la ruta y dibujadas en el panel
 - [ ] Hora de salida con menos tráfico: con una tabla simulada por hora (sin Google por ahora)
 - [ ] Aviso al chofer cuando se le asigna una ruta, por el mismo canal de eventos (sin Firebase)
 - [ ] Endpoints de la app del chofer: ver la ruta, iniciarla, confirmar cada parada y reportar "no se pudo"
 - [ ] Aviso al operador si el chofer no inicia la ruta a los 10 minutos
 - [x] Indicadores calculados desde la base (resumen diario y ruta fija calculada con las mismas lecturas)
-- [ ] Decidir la ruta fija de referencia de los indicadores: 3 rondas por día o 1 ronda nocturna
+- [x] Decidir la ruta fija de referencia de los indicadores: 3 rondas por día (la más real)
+- [ ] Levantar un OSRM propio para la demo publicada (el público de demostración es para pruebas)
 
 ## Fase 6: App del chofer (se divide en mini sprints)
 

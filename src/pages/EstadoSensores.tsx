@@ -3,7 +3,7 @@ import CurvaSensor from '../components/CurvaSensor';
 import Encabezado from '../components/Encabezado';
 import { useSimulacion, type Curva } from '../context/SimulacionContext';
 import { DETALLE_ESTADO_SENSOR, ETIQUETA_ESTADO_SENSOR, resumenSensores } from '../logic/estadoSensor';
-import { lecturaConfiable } from '../logic/prioridad';
+import { lecturaConfiable, textoDeDesborde } from '../logic/prioridad';
 import type { Contenedor, EstadoSensor } from '../types';
 import { COLOR_ESTADO_SENSOR } from '../utils/colores';
 import { formatearHaceCuanto, formatearHora } from '../utils/formato';
@@ -255,6 +255,12 @@ export default function EstadoSensores() {
                     : 'Sin datos'}
                 </dd>
               </div>
+              {textoDeDesborde(elegido, estado.relojMs) && (
+                <div>
+                  <dt>Pronóstico</dt>
+                  <dd>{textoDeDesborde(elegido, estado.relojMs)}</dd>
+                </div>
+              )}
             </dl>
 
             <p className="detalle-sensor__accion">
