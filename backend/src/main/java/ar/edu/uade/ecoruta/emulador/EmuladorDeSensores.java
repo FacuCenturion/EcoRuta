@@ -489,7 +489,7 @@ public class EmuladorDeSensores {
                 return "El sensor de " + contenedorId + " se va a trabar la próxima vez que un camión lo vacíe.";
             }
             romperSensor(contenedor, tipo, ahora, horas);
-            return "El sensor de " + contenedorId + " pasó a " + tipo.replace('_', ' ') + " durante " + horas
+            return "El sensor de " + contenedorId + " pasó a " + (tipo.equals(SIN_SENAL) ? "sin señal" : tipo) + " durante " + horas
                     + " h. El sistema lo detecta a las " + (tipo.equals(SIN_SENAL) ? Parametros.HORAS_SIN_SENAL
                             : Parametros.HORAS_VALOR_CONGELADO) + " h.";
         });

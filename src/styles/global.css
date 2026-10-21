@@ -1698,3 +1698,78 @@ textarea {
   color: var(--texto-suave);
   font-size: 12px;
 }
+
+/* Casos de la demo simulada (solo con backend) */
+.boton--demo {
+  border-color: var(--ambar);
+  color: var(--ambar);
+  font-weight: 600;
+}
+
+.demo {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px;
+  background: rgba(37, 48, 31, 0.45);
+  overflow-y: auto;
+}
+
+.demo__ventana {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 560px;
+  padding: 20px;
+  border-radius: var(--radio);
+  background: var(--papel);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.demo__casos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.demo__caso {
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.demo__caso--elegido {
+  border-color: var(--bosque);
+  background: var(--bosque);
+  color: var(--papel);
+}
+
+.demo__resultado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--salvia-clara);
+}
+
+.demo__resultado .boton {
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.demo__resultado--error {
+  background: #f3d9d2;
+  color: #6e2a1b;
+}

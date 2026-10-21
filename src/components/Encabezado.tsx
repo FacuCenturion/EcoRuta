@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { IconoCampana } from './Iconos';
+import PanelDeDemo from './PanelDeDemo';
 import { useSimulacion, type FiltroZona } from '../context/SimulacionContext';
 import { esAbierto } from '../logic/indicadores';
 import { formatearFechaLarga, formatearHora } from '../utils/formato';
@@ -34,7 +35,9 @@ export default function Encabezado({
     areas,
     palabraArea,
     aviso,
+    dispararCaso,
   } = useSimulacion();
+  const [demo, setDemo] = useState(false);
   const pendientes = estado.incidentes.filter((i) => i.estado === 'pendiente').length;
   const abiertos = estado.incidentes.filter((i) => esAbierto(i.estado)).length;
 
@@ -87,6 +90,11 @@ export default function Encabezado({
             ))}
           </div>
         )}
+        {dispararCaso && (
+          <button type="button" className="boton boton--demo" onClick={() => setDemo(true)}>
+            Demo
+          </button>
+        )}
         {acciones}
         <Link
           to="/incidentes"
@@ -97,6 +105,7 @@ export default function Encabezado({
           {pendientes > 0 && <span className="campana__numero">{pendientes}</span>}
         </Link>
       </div>
+      {demo && <PanelDeDemo cerrar={() => setDemo(false)} />}
     </header>
   );
 }

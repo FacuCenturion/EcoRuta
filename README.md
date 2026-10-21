@@ -48,7 +48,7 @@ Así como está, el panel simula los datos en el navegador. Para usar el backend
 
 Con backend, el panel muestra solo la zona 1 dividida en 4 sectores, con los 180 contenedores reales, y el filtro del encabezado pasa a ser por sector. Los datos se actualizan cuando el backend avisa que hubo cambios (Server-Sent Events), sin preguntar cada tantos segundos. Pausar y acelerar desde el encabezado controla la simulación del backend, que es compartida: si dos personas tienen el panel abierto, ven lo mismo.
 
-Lo que solo aparece con backend: las rutas dibujadas por las calles (OSRM), la hora estimada de desborde de cada contenedor, las paradas "de paso" y el botón "Despachar ahora" en Rutas y camiones.
+Lo que solo aparece con backend: las rutas dibujadas por las calles (OSRM), la hora estimada de desborde de cada contenedor, las paradas "de paso", el botón "Despachar ahora" en Rutas y camiones y el botón **Demo** del encabezado. Demo abre los casos de la simulación para la presentación (romper o reparar un sensor, alguien revolviendo la basura, llenar un contenedor, un evento masivo, un reporte vecinal y, para el director, reiniciar la demo) y lleva a la pantalla donde se ve cada uno.
 
 ### Usuarios de prueba
 

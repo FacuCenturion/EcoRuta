@@ -38,6 +38,17 @@ export interface Estadisticas {
   eficienciaPorArea: Record<number, number | null>;
 }
 
+// Lo que acepta POST /simulacion/casos (ver backend/README.md)
+export interface CasoDeDemo {
+  tipo: 'falla_sensor' | 'reparar_sensor' | 'revolver' | 'llenar' | 'evento_masivo' | 'reporte_vecinal';
+  contenedorId?: string;
+  sectorId?: number;
+  falla?: 'sin_senal' | 'congelado' | 'trabado';
+  horas?: number;
+  nivel?: number;
+  comentario?: string;
+}
+
 export interface Curva {
   historial: LecturaSensor[];
   estimadas: LecturaSensor[];
@@ -65,6 +76,9 @@ interface ValorContexto {
   pedirCurva?: (contenedorId: string) => Promise<Curva>; // solo con backend; si no, la curva sale del contenedor
   pedirTrazado?: (rutaId: number) => Promise<TrazadoApi>; // recorrido por las calles, solo con backend
   despachar?: (areaId: number) => Promise<string | null>; // despacho manual; devuelve el error, si hubo
+  // Casos de la demo (solo con backend y el emulador prendido). Devuelven lo que pasó, en palabras.
+  dispararCaso?: (caso: CasoDeDemo) => Promise<{ bien: boolean; mensaje: string }>;
+  reiniciarDemo?: () => Promise<{ bien: boolean; mensaje: string }>;
   aviso?: string; // un error que el operador tiene que ver
 }
 
@@ -288,6 +302,31 @@ function ProveedorConectado({ children }: { children: ReactNode }) {
         };
       },
       pedirTrazado: (rutaId) => pedir<TrazadoApi>(`/rutas/${rutaId}/trazado`),
+      dispararCaso: simulacion.activa
+        ? async (caso) => {
+            try {
+              const { mensaje } = await pedir<{ mensaje: string }>('/simulacion/casos', {
+                metodo: 'POST',
+                cuerpo: caso,
+              });
+              actualizar();
+              return { bien: true, mensaje };
+            } catch (error) {
+              return { bien: false, mensaje: (error as Error).message };
+            }
+          }
+        : undefined,
+      reiniciarDemo: simulacion.activa
+        ? async () => {
+            try {
+              await pedir('/simulacion/reiniciar', { metodo: 'POST' });
+              actualizar();
+              return { bien: true, mensaje: 'La demo volvió al punto de partida.' };
+            } catch (error) {
+              return { bien: false, mensaje: (error as Error).message };
+            }
+          }
+        : undefined,
       despachar: async (sectorId) => {
         try {
           await pedir('/rutas/planificar', { metodo: 'POST', cuerpo: { sectorId } });

@@ -191,6 +191,8 @@ function backendFalso(url: string, init?: RequestInit): Promise<Response> {
     });
     return Promise.resolve(new Response(cuerpo, { headers: { 'Content-Type': 'text/event-stream' } }));
   }
+  if (init?.method === 'POST' && ruta === '/simulacion/casos')
+    return Promise.resolve(Response.json({ mensaje: 'El contenedor queda al 97%.' }));
   if (init?.method === 'POST') return Promise.resolve(Response.json({}));
   const datos = RESPUESTAS[ruta];
   return Promise.resolve(datos === undefined ? new Response(null, { status: 404 }) : Response.json(datos));
@@ -317,6 +319,23 @@ describe('panel conectado al backend', () => {
   it('el mapa en vivo muestra el pronóstico de desborde', async () => {
     const div = await mostrar('/mapa');
     expect(div.textContent).toMatch(/Desborda a las .+ \(estimado\)/);
+  });
+
+  it('el botón Demo dispara un caso de la simulación', async () => {
+    const div = await mostrar('/');
+    const demo = [...div.querySelectorAll('button')].find((b) => b.textContent === 'Demo');
+    await act(async () => demo!.click());
+    expect(div.textContent).toContain('Demo simulada');
+    expect(div.textContent).toContain('Reiniciar la demo'); // la sesión de prueba es del director
+    const llenar = [...div.querySelectorAll('button')].find((b) => b.textContent === 'Llenar un contenedor');
+    await act(async () => llenar!.click());
+    const disparar = [...div.querySelectorAll('button')].find((b) => b.textContent === 'Disparar el caso');
+    await act(async () => disparar!.click());
+    await act(() => new Promise((listo) => setTimeout(listo, 10)));
+    const pedido = pedidos.find((p) => p.url === '/simulacion/casos');
+    expect(JSON.parse(pedido!.cuerpo!)).toEqual({ tipo: 'llenar', contenedorId: 'MON-02', nivel: 97 });
+    expect(div.textContent).toContain('El contenedor queda al 97%.');
+    expect(div.textContent).toContain('Ver en Mapa en vivo');
   });
 
   it('las demás pantallas cargan', async () => {
