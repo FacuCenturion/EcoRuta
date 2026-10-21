@@ -69,7 +69,12 @@ export function loQueFalta(tramos: Tramo[], actual: number, metrosDelActual: num
 export function velocidadMaxima(calle: string): number {
   const nombre = calle.toLowerCase();
   if (nombre.startsWith('autopista') || nombre.startsWith('au ')) return 80;
-  if (nombre.startsWith('avenida') || nombre.startsWith('av.') || nombre.startsWith('av ') || nombre.startsWith('diagonal'))
+  if (
+    nombre.startsWith('avenida') ||
+    nombre.startsWith('av.') ||
+    nombre.startsWith('av ') ||
+    nombre.startsWith('diagonal')
+  )
     return 60;
   return 40;
 }
@@ -85,7 +90,8 @@ export function calleDe(direccion: string): string {
   return direccion.replace(/\s+\d+\s*$/, '');
 }
 
-export type Flecha = 'izquierda' | 'derecha' | 'leve-izquierda' | 'leve-derecha' | 'derecho' | 'vuelta' | 'rotonda' | 'llegada';
+export type Flecha =
+  'izquierda' | 'derecha' | 'leve-izquierda' | 'leve-derecha' | 'derecho' | 'vuelta' | 'rotonda' | 'llegada';
 
 export function flechaDe(m: Maniobra | null): Flecha {
   if (!m) return 'llegada';

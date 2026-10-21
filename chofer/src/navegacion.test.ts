@@ -15,7 +15,10 @@ const trazado: Trazado = {
   rutaId: 1,
   estado: 'listo',
   kmPorCalle: 2.9,
-  tramos: [[base, esquina, contenedor], [contenedor, base]],
+  tramos: [
+    [base, esquina, contenedor],
+    [contenedor, base],
+  ],
   indicaciones: [
     [
       { tipo: 'depart', modificador: null, calle: 'Av. Belgrano', salida: null, ...base, metros: 900 },

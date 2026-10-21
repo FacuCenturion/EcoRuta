@@ -24,7 +24,11 @@ export function usePosicion(
   inicio: Coordenada | undefined, // dónde estaba el camión según el backend; vacío hasta que llega el turno
   acelerar: number, // en la simulación, cuántas veces más rápido que en la realidad
 ): Posicion {
-  const [posicion, setPosicion] = useState<Posicion>({ punto: inicio ?? { lat: 0, lng: 0 }, rumbo: 0, velocidadKmh: 0 });
+  const [posicion, setPosicion] = useState<Posicion>({
+    punto: inicio ?? { lat: 0, lng: 0 },
+    rumbo: 0,
+    velocidadKmh: 0,
+  });
   const actual = useRef(posicion);
   actual.current = posicion;
 

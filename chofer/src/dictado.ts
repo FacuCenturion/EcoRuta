@@ -31,7 +31,9 @@ export function dictar(alTerminar: (texto: string) => void, alFallar: () => void
   reconocedor.lang = 'es-AR';
   reconocedor.interimResults = false;
   reconocedor.onresult = (e) => {
-    texto = Array.from(e.results).map((r) => r[0].transcript).join(' ');
+    texto = Array.from(e.results)
+      .map((r) => r[0].transcript)
+      .join(' ');
   };
   reconocedor.onend = () => alTerminar(texto.trim());
   reconocedor.onerror = alFallar;

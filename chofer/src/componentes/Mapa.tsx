@@ -36,9 +36,12 @@ function insignia(clase: string, contenido: string, numero?: string) {
   });
 }
 
-const PAPELERA = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 4h4"/><path d="M6 7l1 13h10l1-13"/></svg>';
-const CHECK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-const CASA = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></svg>';
+const PAPELERA =
+  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 4h4"/><path d="M6 7l1 13h10l1-13"/></svg>';
+const CHECK =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const CASA =
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></svg>';
 
 interface PropsCamara {
   posicion?: Posicion;
@@ -105,10 +108,18 @@ export default function Mapa(props: Props) {
         margenAbajo={props.margenAbajo ?? 0}
       />
       <AlMover alSoltar={props.alSoltar} />
-      {hecho.length > 1 && <Polyline positions={hecho.map((p) => [p.lat, p.lng])} pathOptions={{ color: '#7d8679', weight: 6, opacity: 0.7 }} />}
+      {hecho.length > 1 && (
+        <Polyline
+          positions={hecho.map((p) => [p.lat, p.lng])}
+          pathOptions={{ color: '#7d8679', weight: 6, opacity: 0.7 }}
+        />
+      )}
       {pendiente.length > 1 && (
         <>
-          <Polyline positions={pendiente.map((p) => [p.lat, p.lng])} pathOptions={{ color: '#1f3f7a', weight: 10, opacity: 0.6 }} />
+          <Polyline
+            positions={pendiente.map((p) => [p.lat, p.lng])}
+            pathOptions={{ color: '#1f3f7a', weight: 10, opacity: 0.6 }}
+          />
           <Polyline positions={pendiente.map((p) => [p.lat, p.lng])} pathOptions={{ color: '#659df6', weight: 6 }} />
         </>
       )}
@@ -125,7 +136,11 @@ export default function Mapa(props: Props) {
           <Marker
             key={p.id}
             position={[p.posicion.lat, p.posicion.lng]}
-            icon={insignia(`${clase}${posicion ? ' marca--cuadrada' : ''}`, contenido, posicion && !hecha ? String(i + 1) : undefined)}
+            icon={insignia(
+              `${clase}${posicion ? ' marca--cuadrada' : ''}`,
+              contenido,
+              posicion && !hecha ? String(i + 1) : undefined,
+            )}
             title={p.direccion}
             zIndexOffset={p === proxima ? 500 : 0}
           />
@@ -139,7 +154,14 @@ export default function Mapa(props: Props) {
           zIndexOffset={800}
         />
       )}
-      {posicion && <Marker position={[posicion.punto.lat, posicion.punto.lng]} icon={flecha} zIndexOffset={1000} interactive={false} />}
+      {posicion && (
+        <Marker
+          position={[posicion.punto.lat, posicion.punto.lng]}
+          icon={flecha}
+          zIndexOffset={1000}
+          interactive={false}
+        />
+      )}
     </MapContainer>
   );
 }

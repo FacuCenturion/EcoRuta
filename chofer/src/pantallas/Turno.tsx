@@ -108,6 +108,7 @@ export default function PantallaTurno({ usuario, salir }: Props) {
     return () => document.removeEventListener('visibilitychange', alOcultar);
   }, [confirmarPendiente]);
 
+  useAvisoDeRutaNueva(datos);
   useEnviarPosicion(Boolean(enCurso), posicion);
   useIndicacionesEnVoz(tramoActual, posicion, proxima, llegada, volviendo);
 
@@ -160,7 +161,10 @@ export default function PantallaTurno({ usuario, salir }: Props) {
             type="button"
             className="boton boton--principal"
             disabled={ocupado}
-            onClick={() => accion('/chofer/turno/empezar')}
+            onClick={() => {
+              pedirPermisoDeNotificaciones();
+              accion('/chofer/turno/empezar');
+            }}
           >
             <IconoPlay /> Empezar turno
           </button>
@@ -344,7 +348,10 @@ export default function PantallaTurno({ usuario, salir }: Props) {
           <p>{sinVaciar.direccion}</p>
         </Encabezado>
       ) : llegada && proxima ? (
-        <Encabezado icono={<IconoCheck tamano={36} />} lateral={{ titulo: 'Parada', valor: `${cerradas + 1} de ${total}` }}>
+        <Encabezado
+          icono={<IconoCheck tamano={36} />}
+          lateral={{ titulo: 'Parada', valor: `${cerradas + 1} de ${total}` }}
+        >
           <h1>Llegaste</h1>
           <p>{proxima.direccion}</p>
         </Encabezado>
@@ -846,7 +853,9 @@ function ListaParadas({ ruta, cerradas, preferencias, cerrar, terminarTurno, sal
               <li key={p.id} className={`parada parada--${estado}`}>
                 <span
                   className={
-                    estado === 'pendiente' && esPrioritaria(p) ? 'numero numero--prioritaria' : `numero numero--${estado}`
+                    estado === 'pendiente' && esPrioritaria(p)
+                      ? 'numero numero--prioritaria'
+                      : `numero numero--${estado}`
                   }
                 >
                   {estado === 'recolectada' ? '✓' : estado === 'no_se_pudo' ? '!' : i + 1}
@@ -1021,6 +1030,40 @@ function useTrazado(ruta: Ruta | null): Trazado | undefined {
   }, [ruta?.id, paradas, yaEsta, intento]);
 
   return actual;
+}
+
+// Cuando aparece una ruta que el chofer todavía no vio: vibra, lo dice en voz alta y, si la app
+// está en segundo plano y dio permiso, manda una notificación del sistema. La que ya estaba al
+// abrir la app no se anuncia.
+function useAvisoDeRutaNueva(turno: Turno | undefined) {
+  const vista = useRef<number | null | undefined>(undefined);
+  useEffect(() => {
+    if (!turno) return;
+    const ruta = turno.ruta;
+    const nueva = ruta && ruta.estado === 'programada' && turno.manejadoPorApp ? ruta.id : null;
+    if (vista.current !== undefined && nueva !== null && nueva !== vista.current) {
+      const texto = `Ruta nueva: ${ruta!.paradas.length} paradas`;
+      navigator.vibrate?.([200, 100, 200]);
+      decir(texto);
+      notificar(texto);
+    }
+    if (nueva !== null || vista.current === undefined) vista.current = nueva;
+  }, [turno]);
+}
+
+function pedirPermisoDeNotificaciones() {
+  if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {
+      // sin permiso, el aviso queda en la pantalla y la vibración
+    });
+  }
+}
+
+function notificar(texto: string) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted' || !document.hidden) return;
+  navigator.serviceWorker?.ready
+    .then((registro) => registro.showNotification('EcoRuta', { body: texto, tag: 'ruta-nueva' }))
+    .catch(() => new Notification('EcoRuta', { body: texto }));
 }
 
 // Manda la posición al backend cada algunos segundos, así el panel ve dónde está el camión

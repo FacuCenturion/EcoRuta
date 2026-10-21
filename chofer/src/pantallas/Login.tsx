@@ -27,7 +27,9 @@ export default function Login({ alEntrar }: Props) {
         alEntrar(sesion);
       }
     } catch (e) {
-      setError(e instanceof ErrorDeApi && e.estado === 401 ? 'Usuario o contraseña incorrectos.' : (e as Error).message);
+      setError(
+        e instanceof ErrorDeApi && e.estado === 401 ? 'Usuario o contraseña incorrectos.' : (e as Error).message,
+      );
     } finally {
       setEnviando(false);
     }

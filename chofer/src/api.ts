@@ -60,7 +60,13 @@ export function separarEventos(texto: string): { eventos: string[]; resto: strin
   const bloques = texto.replace(/\r\n/g, '\n').split('\n\n');
   const resto = bloques.pop() ?? '';
   const eventos = bloques
-    .map((bloque) => bloque.split('\n').find((linea) => linea.startsWith('event:'))?.slice(6).trim())
+    .map((bloque) =>
+      bloque
+        .split('\n')
+        .find((linea) => linea.startsWith('event:'))
+        ?.slice(6)
+        .trim(),
+    )
     .filter((nombre): nombre is string => Boolean(nombre));
   return { eventos, resto };
 }

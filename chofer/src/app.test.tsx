@@ -41,7 +41,10 @@ const parada = (id: number, direccion: string, cambios: Partial<Parada> = {}): P
   ...cambios,
 });
 
-const rutaDePrueba = (estado: Ruta['estado'], paradas = [parada(1, 'Florida 450'), parada(2, 'Viamonte 438'), parada(3, 'Paraguay 548')]): Ruta => ({
+const rutaDePrueba = (
+  estado: Ruta['estado'],
+  paradas = [parada(1, 'Florida 450'), parada(2, 'Viamonte 438'), parada(3, 'Paraguay 548')],
+): Ruta => ({
   id: 9,
   estado,
   creada: '2026-10-20T17:20:00-03:00',
@@ -55,7 +58,16 @@ const rutaDePrueba = (estado: Ruta['estado'], paradas = [parada(1, 'Florida 450'
 function turnoDePrueba(cambios: Partial<Turno> = {}): Turno {
   return {
     chofer: 'Lucas Benítez',
-    camion: { id: 'C22', numero: 22, sectorId: 1, sector: 'Retiro y San Nicolás', estado: 'en_base', cargaPct: 0, posicion: BASE, kmRecorridosHoy: 0 },
+    camion: {
+      id: 'C22',
+      numero: 22,
+      sectorId: 1,
+      sector: 'Retiro y San Nicolás',
+      estado: 'en_base',
+      cargaPct: 0,
+      posicion: BASE,
+      kmRecorridosHoy: 0,
+    },
     manejadoPorApp: true,
     base: BASE,
     ruta: null,
@@ -88,7 +100,9 @@ function backendFalso(url: string, init?: RequestInit): Promise<Response> {
   if (ruta === '/chofer/motivos') return Promise.resolve(Response.json(['Auto estacionado', 'Obra o calle cortada']));
   if (ruta === '/chofer/posicion') return Promise.resolve(new Response(null, { status: 204 }));
   if (ruta === '/chofer/ruta/trazado')
-    return Promise.resolve(Response.json({ rutaId: 9, estado: 'sin_servicio', kmPorCalle: null, tramos: [], indicaciones: [] }));
+    return Promise.resolve(
+      Response.json({ rutaId: 9, estado: 'sin_servicio', kmPorCalle: null, tramos: [], indicaciones: [] }),
+    );
   if (ruta === '/chofer/turno/empezar') actual = { ...actual, manejadoPorApp: true };
   if (ruta === '/chofer/ruta/iniciar') actual = { ...actual, ruta: rutaDePrueba('en_curso') };
   return Promise.resolve(Response.json(actual));
@@ -122,7 +136,10 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn(backendFalso));
   localStorage.setItem(
     'ecoruta.chofer.sesion',
-    JSON.stringify({ token: 'token-chofer', usuario: { usuario: 'chofer22', nombre: 'Lucas', iniciales: 'LB', rol: 'chofer' } }),
+    JSON.stringify({
+      token: 'token-chofer',
+      usuario: { usuario: 'chofer22', nombre: 'Lucas', iniciales: 'LB', rol: 'chofer' },
+    }),
   );
 });
 
@@ -159,7 +176,10 @@ describe('app del chofer', () => {
   });
 
   it('al llegar al contenedor muestra sus datos y "recolectado" se puede deshacer', async () => {
-    actual = turnoDePrueba({ ruta: rutaDePrueba('en_curso'), camion: { ...turnoDePrueba().camion, posicion: parada(1, '').posicion } });
+    actual = turnoDePrueba({
+      ruta: rutaDePrueba('en_curso'),
+      camion: { ...turnoDePrueba().camion, posicion: parada(1, '').posicion },
+    });
     const div = await mostrar();
     expect(div.querySelector('h1')?.textContent).toBe('Llegaste');
     expect(div.textContent).toContain('Florida 450');
@@ -174,7 +194,10 @@ describe('app del chofer', () => {
   });
 
   it('si la app se va a segundo plano, el recolectado se manda sin esperar', async () => {
-    actual = turnoDePrueba({ ruta: rutaDePrueba('en_curso'), camion: { ...turnoDePrueba().camion, posicion: parada(1, '').posicion } });
+    actual = turnoDePrueba({
+      ruta: rutaDePrueba('en_curso'),
+      camion: { ...turnoDePrueba().camion, posicion: parada(1, '').posicion },
+    });
     const div = await mostrar();
     await tocar(div, 'Marcar como recolectado');
     Object.defineProperty(document, 'hidden', { configurable: true, value: true });
@@ -185,7 +208,10 @@ describe('app del chofer', () => {
   });
 
   it('"no se pudo" pide el motivo y lo manda', async () => {
-    actual = turnoDePrueba({ ruta: rutaDePrueba('en_curso'), camion: { ...turnoDePrueba().camion, posicion: parada(1, '').posicion } });
+    actual = turnoDePrueba({
+      ruta: rutaDePrueba('en_curso'),
+      camion: { ...turnoDePrueba().camion, posicion: parada(1, '').posicion },
+    });
     const div = await mostrar();
     await tocar(div, 'No se pudo recolectar');
     await esperar();
@@ -201,7 +227,17 @@ describe('app del chofer', () => {
   it('una parada nueva prioritaria se puede rechazar', async () => {
     actual = turnoDePrueba({
       ruta: rutaDePrueba('en_curso'),
-      propuesta: { id: 4, contenedorId: 'SNI-09', direccion: 'Chile 640', posicion: { lat: -34.61, lng: -58.38 }, llenado: 95, orden: 2, kmExtra: 1.2, minutosExtra: 4, motivo: 'llenado' },
+      propuesta: {
+        id: 4,
+        contenedorId: 'SNI-09',
+        direccion: 'Chile 640',
+        posicion: { lat: -34.61, lng: -58.38 },
+        llenado: 95,
+        orden: 2,
+        kmExtra: 1.2,
+        minutosExtra: 4,
+        motivo: 'llenado',
+      },
     });
     const div = await mostrar();
     expect(div.textContent).toContain('Nueva parada prioritaria');
@@ -216,7 +252,11 @@ describe('app del chofer', () => {
     actual = turnoDePrueba({
       ruta: rutaDePrueba('terminada', [
         parada(1, 'Florida 450', { estado: 'recolectada', horaReal: '2026-10-20T17:40:00-03:00' }),
-        parada(2, 'Tacuarí 1340', { estado: 'no_se_pudo', motivo: 'Auto estacionado', horaReal: '2026-10-20T18:06:00-03:00' }),
+        parada(2, 'Tacuarí 1340', {
+          estado: 'no_se_pudo',
+          motivo: 'Auto estacionado',
+          horaReal: '2026-10-20T18:06:00-03:00',
+        }),
       ]),
     });
     const div = await mostrar();
@@ -227,13 +267,24 @@ describe('app del chofer', () => {
     expect(boton(div, 'Volver a la base')).toBeDefined();
   });
 
-  it('cuando el sistema asigna una ruta con la app abierta, aparece sola', async () => {
+  it('cuando el sistema asigna una ruta con la app abierta, aparece sola y el celular vibra', async () => {
+    const vibrar = vi.fn();
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vibrar });
     const div = await mostrar();
     expect(div.textContent).toContain('Sin ruta por ahora');
     actual = turnoDePrueba({ ruta: rutaDePrueba('programada') });
     await act(async () => avisarDesdeElServidor());
     await esperar();
     expect(div.querySelector('h1')?.textContent).toBe('Tu ruta de hoy');
+    expect(vibrar).toHaveBeenCalled();
+  });
+
+  it('una ruta que ya estaba al abrir la app no se anuncia', async () => {
+    const vibrar = vi.fn();
+    Object.defineProperty(navigator, 'vibrate', { configurable: true, value: vibrar });
+    actual = turnoDePrueba({ ruta: rutaDePrueba('programada') });
+    await mostrar();
+    expect(vibrar).not.toHaveBeenCalled();
   });
 
   it('cada pedido lleva el token del chofer', async () => {
